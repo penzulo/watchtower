@@ -1,0 +1,21 @@
+# Root monorepo gitignore
+
+# Build outputs
+dist/
+.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Env files
+.env
+.env.local
+*.local
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*

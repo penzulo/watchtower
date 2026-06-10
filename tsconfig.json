@@ -1,0 +1,11 @@
+{
+  // Root tsconfig — solution file for IDE "open folder" support.
+  // Each workspace has its own tsconfig; this just ties them together
+  // so editors like VS Code can resolve cross-package types without a
+  // monorepo manager.
+  "files": [],
+  "references": [
+    { "path": "./server" },
+    { "path": "./client" }
+  ]
+}
