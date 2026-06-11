@@ -5,6 +5,7 @@
   // monorepo manager.
   "files": [],
   "references": [
+    { "path": "./shared" },
     { "path": "./server" },
     { "path": "./client" }
   ]

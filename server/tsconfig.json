@@ -28,6 +28,12 @@
     "allowImportingTsExtensions": false,              /* Must be false when composite/declaration output is enabled. */
     "verbatimModuleSyntax": true,                     /* Enforce type-only imports so Eden Treaty types stay tree-shakeable. */
     "resolveJsonModule": true,                        /* Allow importing JSON files (e.g. package.json version). */
+    "paths": {
+      /* Maps @watchtower/shared to its TS source so no build step is needed for type resolution. */
+      "@watchtower/shared": ["../shared/src/index.ts"],
+      /* Allows: import { EventSchema } from "@shared/schemas" */
+      "@shared/*": ["../shared/src/*"]
+    },
 
     /* JavaScript Support */
     // "allowJs": true,                                  /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */
@@ -83,5 +89,8 @@
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
-  }
+  },
+  "references": [
+    { "path": "../shared" }
+  ]
 }

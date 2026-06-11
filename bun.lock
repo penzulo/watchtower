@@ -21,6 +21,7 @@
         "@tanstack/react-table": "latest",
         "@tanstack/router-plugin": "^1.132.0",
         "@watchtower/server": "workspace:*",
+        "@watchtower/shared": "workspace:*",
         "better-auth": "^1.5.3",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -51,6 +52,18 @@
     "server": {
       "name": "@watchtower/server",
       "version": "1.0.50",
+      "dependencies": {
+        "@watchtower/shared": "workspace:*",
+        "elysia": "latest",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+        "typescript": "^6.0.2",
+      },
+    },
+    "shared": {
+      "name": "@watchtower/shared",
+      "version": "0.0.1",
       "dependencies": {
         "elysia": "latest",
       },
@@ -432,6 +445,8 @@
     "@watchtower/client": ["@watchtower/client@workspace:client"],
 
     "@watchtower/server": ["@watchtower/server@workspace:server"],
+
+    "@watchtower/shared": ["@watchtower/shared@workspace:shared"],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
