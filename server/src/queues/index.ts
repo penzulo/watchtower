@@ -1,6 +1,6 @@
+import { connection } from "@watchtower/server/redis";
 import type { DeadLetter, LogRecord } from "@watchtower/shared";
 import { Queue } from "bullmq";
-import { connection } from "../redis";
 
 export const Jobs = {
 	PERSIST_LOG: "persist_log",

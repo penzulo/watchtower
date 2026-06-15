@@ -1,5 +1,5 @@
+import { v1 } from "@watchtower/server/routes/v1";
 import { Elysia } from "elysia";
-import { v1 } from "./routes/v1";
 
 const app = new Elysia().use(v1).listen(3000);
 

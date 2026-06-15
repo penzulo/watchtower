@@ -1,22 +1,24 @@
 {
-  "name": "@watchtower/server",
-  "version": "1.0.50",
-  "module": "src/index.ts",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@watchtower/shared": "workspace:*",
-    "bullmq": "^5.78.0",
-    "elysia": "latest",
-    "ioredis": "5.10.1"
-  },
-  "devDependencies": {
-    "bun-types": "latest",
-    "typescript": "^6.0.2"
-  }
+	"name": "@watchtower/server",
+	"version": "1.0.50",
+	"module": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./*": "./src/*/index.ts"
+	},
+	"scripts": {
+		"dev": "bun run --watch src/index.ts",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@clickhouse/client": "^1.20.0",
+		"@watchtower/shared": "workspace:*",
+		"bullmq": "^5.78.0",
+		"elysia": "latest",
+		"ioredis": "5.10.1"
+	},
+	"devDependencies": {
+		"bun-types": "latest",
+		"typescript": "^6.0.2"
+	}
 }
