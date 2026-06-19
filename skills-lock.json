@@ -1,11 +1,17 @@
 {
-  "version": 1,
-  "skills": {
-    "elysiajs": {
-      "source": "elysiajs/skills",
-      "sourceType": "github",
-      "skillPath": "elysia/SKILL.md",
-      "computedHash": "55268e69a2c766ed67e56a0db57544f60cc52dba0c7f024a974baf965e525e1b"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"elysiajs": {
+			"source": "elysiajs/skills",
+			"sourceType": "github",
+			"skillPath": "elysia/SKILL.md",
+			"computedHash": "55268e69a2c766ed67e56a0db57544f60cc52dba0c7f024a974baf965e525e1b"
+		},
+		"modern-web-guidance": {
+			"source": "GoogleChrome/modern-web-guidance",
+			"sourceType": "github",
+			"skillPath": "skills/modern-web-guidance/SKILL.md",
+			"computedHash": "9f4a50b16567d3e146014ca1e36cf31d11a9b28468eebdbbbee06ffe3b08dda8"
+		}
+	}
 }
