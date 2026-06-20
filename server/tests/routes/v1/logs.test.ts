@@ -9,6 +9,7 @@ import {
 	spyOn,
 } from "bun:test";
 import { treaty } from "@elysiajs/eden";
+import * as clickhouseQuery from "@watchtower/server/clickhouse/query";
 import { app } from "@watchtower/server/index";
 import * as queues from "@watchtower/server/queues";
 import * as redis from "@watchtower/server/redis";
@@ -38,23 +39,30 @@ function makeRequest(body: unknown): Request {
 let publishSpy: Mock<typeof redis.publishLog>;
 let enqueueSpy: Mock<typeof queues.enqueueLog>;
 let deadSpy: Mock<typeof queues.enqueueDead>;
+let queryLogsSpy: Mock<typeof clickhouseQuery.queryLogs>;
 
 beforeAll(() => {
 	publishSpy = spyOn(redis, "publishLog").mockResolvedValue(undefined);
 	enqueueSpy = spyOn(queues, "enqueueLog").mockResolvedValue(undefined);
 	deadSpy = spyOn(queues, "enqueueDead").mockResolvedValue(undefined);
+	queryLogsSpy = spyOn(clickhouseQuery, "queryLogs").mockResolvedValue({
+		logs: [],
+		next_cursor: null,
+	});
 });
 
 beforeEach(() => {
 	publishSpy.mockClear();
 	enqueueSpy.mockClear();
 	deadSpy.mockClear();
+	queryLogsSpy.mockClear();
 });
 
 afterAll(() => {
 	publishSpy.mockRestore();
 	enqueueSpy.mockRestore();
 	deadSpy.mockRestore();
+	queryLogsSpy.mockRestore();
 });
 
 describe("POST /api/v1/logs", () => {
@@ -244,6 +252,80 @@ describe("POST /api/v1/logs", () => {
 			// 202 confirms the route resolved — not 404
 			expect(response.status).toBe(202);
 		});
+	});
+});
+
+// ------------------------------------------------------------------ GET /api/v1/logs
+
+describe("GET /api/v1/logs", () => {
+	it("returns 200 and calls queryLogs with correct parameters", async () => {
+		queryLogsSpy.mockResolvedValueOnce({
+			logs: [
+				{
+					id: "log1",
+					message: "test",
+					timestamp: "2023-01-01T00:00:00Z",
+					service: "auth",
+					level: "info",
+					environment: "development",
+					received_at: "2023-01-01T00:00:00Z",
+				},
+			],
+			next_cursor: "cursor_xyz",
+		});
+
+		const response = await app.handle(
+			new Request(
+				"http://localhost/api/v1/logs?from=2023-01-01T00:00:00.000Z&to=2023-01-02T00:00:00.000Z&service=auth&level=info&environment=development&limit=50",
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.logs.length).toBe(1);
+		expect(body.next_cursor).toBe("cursor_xyz");
+
+		expect(queryLogsSpy).toHaveBeenCalledTimes(1);
+		expect(queryLogsSpy).toHaveBeenCalledWith({
+			service: "auth",
+			levels: ["info"],
+			environment: "development",
+			from: "2023-01-01T00:00:00.000Z",
+			to: "2023-01-02T00:00:00.000Z",
+			limit: 50,
+			cursor: undefined,
+		});
+	});
+
+	it("returns 400 if 'from' is after 'to'", async () => {
+		const response = await app.handle(
+			new Request(
+				"http://localhost/api/v1/logs?from=2023-01-02T00:00:00Z&to=2023-01-01T00:00:00Z",
+			),
+		);
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.message).toBe("'from' must be earlier than 'to'");
+		expect(queryLogsSpy).not.toHaveBeenCalled();
+	});
+
+	it("returns 400 if time range exceeds 30 days", async () => {
+		const response = await app.handle(
+			new Request(
+				"http://localhost/api/v1/logs?from=2023-01-01T00:00:00Z&to=2023-03-01T00:00:00Z",
+			),
+		);
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.message).toBe("Time range cannot exceed 30 days");
+		expect(queryLogsSpy).not.toHaveBeenCalled();
+	});
+
+	it("returns 422 if 'from' or 'to' is missing", async () => {
+		const response = await app.handle(
+			new Request("http://localhost/api/v1/logs?from=2023-01-01T00:00:00Z"),
+		);
+		expect(response.status).toBe(422);
 	});
 });
 
