@@ -1,4 +1,5 @@
 import { t } from "elysia";
+import { AppEnvironmentSchema } from "./environment";
 import { LogLevel } from "./log-level";
 
 /**
@@ -12,11 +13,7 @@ export const LogPayloadSchema = t.Object({
 	timestamp: t.String({ format: "date-time" }),
 	level: LogLevel,
 	service: t.String({ minLength: 1 }),
-	environment: t.Union([
-		t.Literal("production"),
-		t.Literal("staging"),
-		t.Literal("development"),
-	]),
+	environment: AppEnvironmentSchema,
 	message: t.String({ minLength: 1 }),
 	version: t.Optional(t.String()),
 	extras: t.Optional(t.Record(t.String(), t.Unknown())),

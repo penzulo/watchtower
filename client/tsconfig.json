@@ -1,26 +1,20 @@
 {
 	"include": ["**/*.ts", "**/*.tsx"],
-	"references": [
-		// Reference shared first — server may also depend on it
-		{ "path": "../shared" },
-		{ "path": "../server" }
-	],
+	"references": [{ "path": "../shared" }, { "path": "../server" }],
 	"compilerOptions": {
 		"target": "ES2022",
 		"jsx": "react-jsx",
 		"module": "ESNext",
-		"paths": {
-			"@/*": ["./src/*"],
-			// Allows: import type { App } from "@watchtower/server"
-			"@watchtower/server": ["../server/src/index.ts"],
-			// Allows: import { EventSchema } from "@watchtower/shared"
-			"@watchtower/shared": ["../shared/src/index.ts"],
-			// Allows: import { EventSchema } from "@shared/schemas"
-			//         import { EventSchema } from "@shared/schemas/event"
-			"@shared/*": ["../shared/src/*"]
-		},
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"types": ["vite/client"],
+
+		/* Path aliases */
+		"paths": {
+			"@/*": ["./src/*"],
+			"@watchtower/server": ["../server/src/index.ts"],
+			"@watchtower/shared": ["../shared/src/index.ts"],
+			"@shared/*": ["../shared/src/*"]
+		},
 
 		/* Bundler mode */
 		"moduleResolution": "bundler",

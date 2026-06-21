@@ -1,7 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { DeadLetter, LogRecord } from "@watchtower/shared";
 import type { Job } from "bullmq";
-import { connection } from "../redis";
 import { enqueueDead, enqueueLog, Jobs, logQueue } from ".";
 
 // ------------------------------------------------------------------ helpers

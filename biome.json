@@ -1,5 +1,6 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
+	"root": true,
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"vcs": {
 		"enabled": false,
 		"clientKind": "git",
@@ -11,7 +12,8 @@
 			"**",
 			"!**/node_modules/**/*",
 			"!**/dist/**/*",
-			"!**/src/routeTree.gen.ts"
+			"!**/src/routeTree.gen.ts",
+			"!**/.agents/**/*"
 		]
 	},
 	"formatter": {
@@ -28,6 +30,11 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	}
 }
