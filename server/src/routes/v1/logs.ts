@@ -1,18 +1,20 @@
+import { betterAuthPlugin } from "@watchtower/server/auth/middleware";
 import { queryLogs } from "@watchtower/server/clickhouse/query";
 import { enqueueDead, enqueueLog } from "@watchtower/server/queues";
 import { createSubscriber, publishLog } from "@watchtower/server/redis";
 import { LogQuerySchema } from "@watchtower/server/schemas/query";
-import { LogPayloadSchema } from "@watchtower/shared";
+import { type LogPayload, LogPayloadSchema } from "@watchtower/shared";
 import { Elysia, StatusMap } from "elysia";
 
 const MAX_RANGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 export const logRoutes = new Elysia({ prefix: "/logs" })
+	.use(betterAuthPlugin)
 	.post(
 		"/",
 		async ({ body, set }) => {
 			const record = {
-				...body,
+				...(body as LogPayload),
 				id: crypto.randomUUID(),
 				received_at: new Date().toISOString(),
 			};
@@ -38,33 +40,39 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 		},
 	)
 
-	.get("/stream", ({ set }) => {
-		set.headers["content-type"] = "text/event-stream";
-		set.headers["cache-control"] = "no-cache";
-		set.headers.connection = "keep-alive";
+	// TODO: This route needs a separate auth mechanism as it
+	// a service-to-service endpoint
+	.get(
+		"/stream",
+		({ set }) => {
+			set.headers["content-type"] = "text/event-stream";
+			set.headers["cache-control"] = "no-cache";
+			set.headers.connection = "keep-alive";
 
-		return new Response(
-			new ReadableStream({
-				start(controller) {
-					const subscriber = createSubscriber();
+			return new Response(
+				new ReadableStream({
+					start(controller) {
+						const subscriber = createSubscriber();
 
-					subscriber.subscribe("logs:stream");
+						subscriber.subscribe("logs:stream");
 
-					subscriber.on("message", (_, message) => {
-						controller.enqueue(
-							new TextEncoder().encode(`data: ${message}\n\n`),
-						);
-					});
+						subscriber.on("message", (_, message) => {
+							controller.enqueue(
+								new TextEncoder().encode(`data: ${message}\n\n`),
+							);
+						});
 
-					return () => {
-						subscriber.unsubscribe("logs:stream");
-						subscriber.quit();
-					};
-				},
-			}),
-			{ headers: set.headers as Record<string, string> },
-		);
-	})
+						return () => {
+							subscriber.unsubscribe("logs:stream");
+							subscriber.quit();
+						};
+					},
+				}),
+				{ headers: set.headers as Record<string, string> },
+			);
+		},
+		{ auth: true },
+	)
 
 	.get(
 		"/",
@@ -82,19 +90,26 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 				return { message: "Time range cannot exceed 30 days" };
 			}
 
+			const level = query.level;
 			const result = await queryLogs({
 				service: query.service,
-				levels: query.level,
+				levels:
+					level === undefined
+						? undefined
+						: Array.isArray(level)
+							? level
+							: [level],
 				environment: query.environment,
 				from: from.toISOString(),
 				to: to.toISOString(),
-				limit: query.limit ?? 200,
+				limit: Number(query.limit ?? 200),
 				cursor: query.cursor,
 			});
 
 			return result;
 		},
 		{
+			auth: true,
 			query: LogQuerySchema,
 			error({ code, error, set }) {
 				if (code === "VALIDATION") {
