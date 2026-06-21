@@ -1,4 +1,5 @@
 import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
@@ -20,41 +21,40 @@ import {
 	FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { signUp } from "@/lib/auth-client";
-import { type SignupInput, signupSchema } from "@/lib/schemas";
+import { signIn } from "@/lib/auth-client";
+import { type LoginInput, loginSchema } from "@/lib/schemas";
 
-export const Route = createFileRoute("/signup")({
-	component: SignupPage,
+export const Route = createFileRoute("/_auth/login")({
+	component: LoginPage,
 });
 
-function SignupPage() {
+function LoginPage() {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const [serverError, setServerError] = useState<string | null>(null);
 
 	const form = useForm({
 		defaultValues: {
-			name: "",
 			email: "",
 			password: "",
-			confirmPassword: "",
-		} as SignupInput,
+		} as LoginInput,
 
 		validators: {
-			onSubmit: signupSchema,
+			onSubmit: loginSchema,
 		},
 
 		onSubmit: async ({ value }) => {
 			setServerError(null);
-			const { error } = await signUp.email({
-				name: value.name,
+			const { error } = await signIn.email({
 				email: value.email,
 				password: value.password,
 			});
 			if (error) {
 				setServerError(
-					error.message ?? "Something went wrong. Please try again.",
+					error.message ?? "Invalid credentials. Please try again.",
 				);
 			} else {
+				await queryClient.invalidateQueries({ queryKey: ["session"] });
 				await navigate({ to: "/" });
 			}
 		},
@@ -67,21 +67,21 @@ function SignupPage() {
 				<div className="mb-6 text-center">
 					<h1 className="text-2xl font-semibold tracking-tight">Watchtower</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						Create your account
+						Sign in to your account
 					</p>
 				</div>
 
 				<Card>
 					<CardHeader>
-						<CardTitle>Get started</CardTitle>
+						<CardTitle>Welcome back</CardTitle>
 						<CardDescription>
-							Fill in the details below to create your account.
+							Enter your credentials to continue.
 						</CardDescription>
 					</CardHeader>
 
 					<CardContent>
 						<form
-							id="signup-form"
+							id="login-form"
 							onSubmit={(e) => {
 								e.preventDefault();
 								e.stopPropagation();
@@ -89,34 +89,6 @@ function SignupPage() {
 							}}
 						>
 							<FieldGroup>
-								{/* Full name */}
-								<form.Field name="name">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>Full name</FieldLabel>
-												<Input
-													id={field.name}
-													type="text"
-													placeholder="Jane Doe"
-													autoComplete="name"
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													disabled={form.state.isSubmitting}
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-
 								{/* Email */}
 								<form.Field name="email">
 									{(field) => {
@@ -152,42 +124,20 @@ function SignupPage() {
 											field.state.meta.isTouched && !field.state.meta.isValid;
 										return (
 											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>Password</FieldLabel>
+												<div className="flex items-center justify-between">
+													<FieldLabel htmlFor={field.name}>Password</FieldLabel>
+													<a
+														href="/forgot-password"
+														className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+													>
+														Forgot password?
+													</a>
+												</div>
 												<Input
 													id={field.name}
 													type="password"
 													placeholder="••••••••"
-													autoComplete="new-password"
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													disabled={form.state.isSubmitting}
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-
-								{/* Confirm password */}
-								<form.Field name="confirmPassword">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>
-													Confirm password
-												</FieldLabel>
-												<Input
-													id={field.name}
-													type="password"
-													placeholder="••••••••"
-													autoComplete="new-password"
+													autoComplete="current-password"
 													name={field.name}
 													value={field.state.value}
 													onBlur={field.handleBlur}
@@ -231,7 +181,7 @@ function SignupPage() {
 							</Button>
 							<Button
 								type="submit"
-								form="signup-form"
+								form="login-form"
 								disabled={form.state.isSubmitting}
 							>
 								{form.state.isSubmitting && (
@@ -240,19 +190,17 @@ function SignupPage() {
 										className="animate-spin"
 									/>
 								)}
-								{form.state.isSubmitting
-									? "Creating account…"
-									: "Create account"}
+								{form.state.isSubmitting ? "Signing in…" : "Sign in"}
 							</Button>
 						</Field>
 						<FieldSeparator>or</FieldSeparator>
 						<p className="text-center text-sm text-muted-foreground">
-							Already have an account?{" "}
+							Don&apos;t have an account?{" "}
 							<Link
-								to="/login"
+								to="/signup"
 								className="font-medium text-foreground underline-offset-4 hover:underline"
 							>
-								Sign in
+								Sign up
 							</Link>
 						</p>
 					</CardFooter>
