@@ -2,7 +2,7 @@
 
 # Build outputs
 dist/
-.tsbuildinfo
+**/*.tsbuildinfo
 
 # Dependencies
 node_modules/
