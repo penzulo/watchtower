@@ -1,7 +1,11 @@
 import { betterAuthPlugin } from "@watchtower/server/auth/middleware";
 import { queryLogs } from "@watchtower/server/clickhouse/query";
 import { enqueueDead, enqueueLog } from "@watchtower/server/queues";
-import { createSubscriber, publishLog } from "@watchtower/server/redis";
+import {
+	createSubscriber,
+	LOGS_CHANNEL,
+	publishLog,
+} from "@watchtower/server/redis";
 import { LogQuerySchema } from "@watchtower/server/schemas/query";
 import { type LogPayload, LogPayloadSchema } from "@watchtower/shared";
 import { Elysia, StatusMap } from "elysia";
@@ -49,27 +53,39 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 			set.headers["cache-control"] = "no-cache";
 			set.headers.connection = "keep-alive";
 
-			return new Response(
-				new ReadableStream({
-					start(controller) {
-						const subscriber = createSubscriber();
+			const subscriber = createSubscriber();
 
-						subscriber.subscribe("logs:stream");
+			const stream = new ReadableStream({
+				start(controller) {
+					subscriber.subscribe(LOGS_CHANNEL);
 
-						subscriber.on("message", (_, message) => {
+					subscriber.on("message", (_, message) => {
+						try {
+							// Guard against the race where a PUBLISH fires after the
+							// client has disconnected and the controller is already closed.
+							// Without this, Bun throws ERR_INVALID_STATE and crashes.
 							controller.enqueue(
 								new TextEncoder().encode(`data: ${message}\n\n`),
 							);
-						});
+						} catch {
+							// Controller is closed — the cancel() below will clean up
+							// the subscriber on the next tick.
+						}
+					});
+				},
+				// cancel() is the correct ReadableStream lifecycle hook for cleanup.
+				// It fires when: the client disconnects, the response is aborted,
+				// or the stream is explicitly cancelled.
+				// (Returning a function from start() is NOT part of the spec and is silently ignored.)
+				cancel() {
+					subscriber.unsubscribe(LOGS_CHANNEL);
+					subscriber.quit().catch(() => {});
+				},
+			});
 
-						return () => {
-							subscriber.unsubscribe("logs:stream");
-							subscriber.quit();
-						};
-					},
-				}),
-				{ headers: set.headers as Record<string, string> },
-			);
+			return new Response(stream, {
+				headers: set.headers as Record<string, string>,
+			});
 		},
 		{ auth: true },
 	)

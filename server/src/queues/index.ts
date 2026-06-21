@@ -1,4 +1,4 @@
-import { connection } from "@watchtower/server/redis";
+import { queueConnection } from "@watchtower/server/redis";
 import type { DeadLetter, LogRecord } from "@watchtower/shared";
 import { Queue } from "bullmq";
 
@@ -8,7 +8,7 @@ export const Jobs = {
 } as const;
 
 export const logQueue = new Queue("logs", {
-	connection,
+	connection: queueConnection,
 	defaultJobOptions: {
 		attempts: 3,
 		backoff: {

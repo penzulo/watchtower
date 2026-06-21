@@ -20,6 +20,7 @@
 		"infra:up": "docker compose up -d",
 		"infra:down": "docker compose down",
 		"infra:logs": "docker compose logs -f",
+		"benchmark": "bun --bun run server/scripts/benchmark.ts",
 		"prepare": "husky"
 	},
 	"devDependencies": {

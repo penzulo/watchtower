@@ -1,6 +1,6 @@
 import { createClient } from "@clickhouse/client";
 import { Jobs } from "@watchtower/server/queues";
-import { connection } from "@watchtower/server/redis";
+import { workerConnection } from "@watchtower/server/redis";
 import type { DeadLetter, LogRecord } from "@watchtower/shared";
 import { type Job, Worker } from "bullmq";
 
@@ -52,7 +52,7 @@ export const logWorker = new Worker(
 		}
 	},
 	{
-		connection,
+		connection: workerConnection,
 		concurrency: 10, // processes up to 10 jobs in parallel
 	},
 );

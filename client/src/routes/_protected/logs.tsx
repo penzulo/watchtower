@@ -12,7 +12,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-	Table,
 	TableBody,
 	TableCell,
 	TableHead,
@@ -90,26 +89,29 @@ const columns = [
 	}),
 ];
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const MAX_LOGS = 50_000;
 const SCROLL_THRESHOLD_PX = 80;
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 function LogsPage() {
 	const [logs, setLogs] = useState<LogRecord[]>([]);
 	const [pendingCount, setPendingCount] = useState(0);
-	// We store pending logs in a ref so the interval closure never captures
-	// a stale slice — only pendingCount drives re-renders.
-	const pendingRef = useRef<LogRecord[]>([]);
-	const isLiveRef = useRef(true);
 	const [isLive, _setIsLive] = useState(true);
 
-	// Sync isLive into both state (for re-renders) and ref (for interval closure)
+	const isLiveRef = useRef(true);
+	const pendingRef = useRef<LogRecord[]>([]);
+	const incomingRef = useRef<LogRecord[]>([]);
+
+	const parentRef = useRef<HTMLDivElement>(null);
+	const isScrollingProgrammatically = useRef(false);
+
 	const setIsLive = useCallback((value: boolean) => {
 		isLiveRef.current = value;
 		_setIsLive(value);
 	}, []);
-
-	const parentRef = useRef<HTMLDivElement>(null);
-	const isScrollingProgrammatically = useRef(false);
 
 	const table = useReactTable({
 		data: logs,
@@ -123,8 +125,6 @@ function LogsPage() {
 	const rowVirtualizer = useVirtualizer({
 		count: rows.length,
 		getScrollElement: () => parentRef.current,
-		// Use the actual measured height once rows are rendered;
-		// 36px matches the compact py-2 row height
 		estimateSize: () => 36,
 		overscan: 15,
 	});
@@ -138,34 +138,30 @@ function LogsPage() {
 			? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
 			: 0;
 
-	// Scroll to the very last row using the virtualizer's own API so it is
-	// aware of the dynamic item sizes it has already measured.
+	// ── Scroll helpers ────────────────────────────────────────────────────────
+
 	const scrollToBottom = useCallback(() => {
 		if (rows.length === 0) return;
 		isScrollingProgrammatically.current = true;
 		rowVirtualizer.scrollToIndex(rows.length - 1, { behavior: "auto" });
-		// Give the browser one frame to apply the scroll before re-enabling
-		// the scroll listener's "pause on scroll-up" detection.
 		requestAnimationFrame(() => {
 			isScrollingProgrammatically.current = false;
 		});
 	}, [rowVirtualizer, rows.length]);
 
-	// Auto-scroll whenever logs grow AND we are live
+	// Auto-scroll whenever the logs array grows while live
 	useEffect(() => {
-		if (isLive && logs.length > 0) {
-			scrollToBottom();
-		}
+		if (isLive && logs.length > 0) scrollToBottom();
 	}, [logs.length, isLive, scrollToBottom]);
 
-	// Scroll detection — only pause when the user manually scrolls up
+	// Scroll detection — sets isLive=false when user scrolls up manually
 	const handleScroll = useCallback(() => {
 		if (isScrollingProgrammatically.current) return;
 		if (!parentRef.current) return;
 
 		const { scrollTop, scrollHeight, clientHeight } = parentRef.current;
-		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-		const atBottom = distanceFromBottom < SCROLL_THRESHOLD_PX;
+		const atBottom =
+			scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD_PX;
 
 		if (!atBottom && isLiveRef.current) {
 			setIsLive(false);
@@ -174,34 +170,61 @@ function LogsPage() {
 			!isLiveRef.current &&
 			pendingRef.current.length === 0
 		) {
-			// User manually scrolled back to the bottom with nothing pending — go live again
 			setIsLive(true);
 		}
 	}, [setIsLive]);
 
-	// "Go Live" — flush buffer, re-enable live mode, snap to bottom
+	// ── Go Live / Jump to bottom ──────────────────────────────────────────────
+
 	const handleGoLive = useCallback(() => {
-		const pending = pendingRef.current;
-		if (pending.length > 0) {
+		// Flush any incoming buffer first so we don't lose in-flight messages
+		const incoming = incomingRef.current.splice(0);
+		const pending = pendingRef.current.splice(0);
+		setPendingCount(0);
+
+		const toAdd = [...incoming, ...pending];
+		if (toAdd.length > 0) {
 			setLogs((prev) => {
-				const next = [...prev, ...pending];
+				const next = [...prev, ...toAdd];
 				return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
 			});
-			pendingRef.current = [];
-			setPendingCount(0);
 		}
+
 		setIsLive(true);
-		// scrollToBottom fires via the useEffect above once logs state updates,
-		// but we also call it eagerly for immediate feedback.
 		requestAnimationFrame(() => scrollToBottom());
 	}, [setIsLive, scrollToBottom]);
 
-	// --- Real SSE connection ---
+	// ── RAF batch flush — the core performance fix ────────────────────────────
+	//
+	// Instead of calling setLogs() on every SSE message (up to 800×/sec),
+	// we accumulate new records into `incomingRef` and flush them to state
+	// at most once per animation frame (~60×/sec).
+	//
+	// This collapses up to ~13 individual setState calls into a single batch
+	// per frame, cutting React reconciliation work by ~13× and eliminating
+	// the lag under heavy ingestion.
+	useEffect(() => {
+		let rafId: number;
+
+		const flush = () => {
+			if (isLiveRef.current && incomingRef.current.length > 0) {
+				const batch = incomingRef.current.splice(0); // drain atomically
+				setLogs((prev) => {
+					const next = [...prev, ...batch];
+					return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
+				});
+			}
+			rafId = requestAnimationFrame(flush);
+		};
+
+		rafId = requestAnimationFrame(flush);
+		return () => cancelAnimationFrame(rafId);
+	}, []);
+
+	// ── SSE connection ────────────────────────────────────────────────────────
+
 	useEffect(() => {
 		const url = `${import.meta.env.VITE_SERVER_URL ?? "http://localhost:3000"}/api/v1/logs/stream`;
-
-		// withCredentials forwards the Better Auth session cookie cross-origin.
-		// EventSource natively reconnects on drop; we don't need a manual retry loop.
 		const source = new EventSource(url, { withCredentials: true });
 
 		source.onmessage = (event: MessageEvent<string>) => {
@@ -209,36 +232,30 @@ function LogsPage() {
 			try {
 				record = JSON.parse(event.data) as LogRecord;
 			} catch {
-				console.warn("[SSE] Failed to parse log message:", event.data);
+				console.warn("[SSE] Failed to parse:", event.data);
 				return;
 			}
 
 			if (isLiveRef.current) {
-				setLogs((prev) => {
-					const next = [...prev, record];
-					return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
-				});
+				// Push into the incoming buffer; the RAF loop flushes this to state
+				incomingRef.current.push(record);
 			} else {
-				pendingRef.current = [...pendingRef.current, record];
+				// Buffer pending without touching state; only the count triggers a render
+				pendingRef.current.push(record);
 				setPendingCount(pendingRef.current.length);
 			}
 		};
 
 		source.onerror = () => {
-			// EventSource will auto-reconnect after a back-off.
-			// We surface the disconnection in the UI via the isLive indicator
-			// without crashing — no action needed here beyond logging.
 			console.warn("[SSE] Connection lost — browser will retry automatically.");
 		};
 
-		return () => {
-			source.close();
-		};
-		// Empty deps — runs once on mount, tears down on unmount.
+		return () => source.close();
 	}, []);
 
 	return (
 		<main className="flex h-svh flex-col bg-background">
+			{/* ── Header ──────────────────────────────────────────────────────── */}
 			<header className="flex items-center justify-between border-b px-6 py-4">
 				<div>
 					<h1 className="text-2xl font-semibold tracking-tight">Live Logs</h1>
@@ -266,24 +283,14 @@ function LogsPage() {
 				</div>
 			</header>
 
-			{/* Table area — overflow-hidden on this wrapper keeps padding/button inside */}
+			{/* ── Table area ──────────────────────────────────────────────────── */}
 			<div className="relative flex-1 overflow-hidden p-4">
-				{/*
-				 * The scroll container. This is the element the virtualizer watches.
-				 * overflow-auto here, NOT on the <Table> itself — this is what makes
-				 * position: sticky on <thead> work correctly.
-				 */}
 				<div
 					ref={parentRef}
 					onScroll={handleScroll}
 					className="h-full overflow-auto rounded-md border bg-card"
 				>
-					<Table>
-						{/*
-						 * Sticky header: sticky + top-0 + z-10 + a solid bg so rows
-						 * scrolling underneath it are hidden behind the header.
-						 * bg-card matches the table background so there's no bleed-through.
-						 */}
+					<table className="w-full caption-bottom text-sm">
 						<TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_hsl(var(--border))]">
 							{table.getHeaderGroups().map((headerGroup) => (
 								<TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -355,18 +362,27 @@ function LogsPage() {
 								</TableRow>
 							)}
 						</TableBody>
-					</Table>
+					</table>
 				</div>
 
-				{/* Floating "Go Live" pill — visible only when paused with buffered logs */}
-				{!isLive && pendingCount > 0 && (
+				{/*
+				 * Floating action button — two states:
+				 *
+				 * 1. Paused + pending logs → "X new logs" (flush + go live)
+				 * 2. Paused + no pending   → "Jump to latest" (scroll + go live)
+				 *
+				 * Neither shows when isLive=true AND user is at the bottom.
+				 */}
+				{!isLive && (
 					<div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2">
 						<Button
 							onClick={handleGoLive}
 							className="animate-in fade-in slide-in-from-bottom-3 flex items-center gap-2 rounded-full px-5 shadow-xl"
 						>
 							<ArrowDownIcon className="h-4 w-4" />
-							{pendingCount.toLocaleString()} new logs
+							{pendingCount > 0
+								? `${pendingCount.toLocaleString()} new logs`
+								: "Jump to latest"}
 						</Button>
 					</div>
 				)}

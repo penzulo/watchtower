@@ -1,5 +1,4 @@
 import { treaty } from "@elysiajs/eden";
-
 import type { App } from "@watchtower/server";
 
 /**

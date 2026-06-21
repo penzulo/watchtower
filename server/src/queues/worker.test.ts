@@ -10,7 +10,7 @@ import {
 import { createClient } from "@clickhouse/client";
 import { Jobs, logQueue } from "@watchtower/server/queues";
 import { logWorker } from "@watchtower/server/queues/worker";
-import { connection } from "@watchtower/server/redis";
+import { queueConnection } from "@watchtower/server/redis";
 import type { DeadLetter, LogRecord } from "@watchtower/shared";
 import { QueueEvents } from "bullmq";
 
@@ -24,7 +24,7 @@ const clickhouse = createClient({
 });
 
 // QueueEvents lets us await job completion/failure without polling
-const queueEvents = new QueueEvents("logs", { connection });
+const queueEvents = new QueueEvents("logs", { connection: queueConnection });
 
 // ------------------------------------------------------------------ helpers
 
@@ -118,7 +118,7 @@ afterAll(async () => {
 	await queueEvents.close();
 	await logQueue.close();
 	await clickhouse.close();
-	await connection.quit();
+	await queueConnection.quit();
 });
 
 // ------------------------------------------------------------------ persistLog (unit-style)
