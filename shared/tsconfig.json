@@ -1,29 +1,29 @@
 {
-  "include": ["src/**/*.ts"],
-  "compilerOptions": {
-    /* Projects */
-    "composite": true,
-    "incremental": true,
-    "tsBuildInfoFile": "./.tsbuildinfo",
+	"include": ["src/**/*.ts"],
+	"compilerOptions": {
+		/* Projects */
+		"composite": true,
+		"incremental": true,
+		"tsBuildInfoFile": "./.tsbuildinfo",
 
-    /* Language and Environment */
-    "target": "ES2022",
-    "types": ["bun-types"],
+		/* Language and Environment */
+		"target": "ES2022",
+		"types": ["bun-types"],
 
-    /* Modules */
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "verbatimModuleSyntax": true,
-    "resolveJsonModule": true,
+		/* Modules */
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"verbatimModuleSyntax": true,
+		"resolveJsonModule": true,
 
-    /* Emit */
-    "declaration": true,
-    "declarationMap": true,
+		/* Emit */
+		"declaration": true,
+		"declarationMap": true,
 
-    /* Type Checking */
-    "strict": true,
-    "skipLibCheck": true
-  }
+		/* Type Checking */
+		"strict": true,
+		"skipLibCheck": true
+	}
 }

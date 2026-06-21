@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import type { LogRecord } from "@watchtower/shared";
 import type Redis from "ioredis";
-import { connection, createSubscriber, LOGS_CHANNEL, publishLog } from ".";
+import { createSubscriber, LOGS_CHANNEL, publishLog } from ".";
 
 // Reusable factory so each test that needs a fresh subscriber
 // doesn't repeat the setup boilerplate
@@ -49,8 +49,7 @@ const baseRecord = (): LogRecord => ({
 });
 
 describe("Redis Pub/Sub", () => {
-	afterAll(async () => {
-	});
+	afterAll(async () => {});
 
 	describe("publishLog", () => {
 		let subscriber: Redis;

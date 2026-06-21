@@ -10,7 +10,6 @@ mock.module("@clickhouse/client", () => ({
 	}),
 }));
 
-// Now we can import the module after mocking the client
 import { queryLogs } from "@watchtower/server/clickhouse/query";
 
 describe("clickhouse/query", () => {
