@@ -7,7 +7,7 @@
 		"shared"
 	],
 	"scripts": {
-		"dev": "bun --bun run --filter '*' dev",
+		"dev": "concurrently -c \"cyan,magenta\" \"bun:dev:server\" \"bun:dev:client\"",
 		"dev:client": "bun --bun run --cwd client dev",
 		"dev:server": "bun --bun run --cwd server dev",
 		"build": "bun --bun run --filter '*' build",
@@ -24,6 +24,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.0",
+		"concurrently": "^10.0.3",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.0.7"
 	},
