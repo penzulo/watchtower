@@ -1,7 +1,12 @@
 import { cors } from "@elysiajs/cors";
 import { betterAuthPlugin } from "@watchtower/server/auth/middleware";
+import { runMigrations } from "@watchtower/server/clickhouse/migrate";
 import { v1 } from "@watchtower/server/routes/v1";
+import "@watchtower/server/queues/worker";
 import { Elysia } from "elysia";
+
+// Ensure database schema is up-to-date before starting the server
+await runMigrations();
 
 export const app = new Elysia()
 	.use(
