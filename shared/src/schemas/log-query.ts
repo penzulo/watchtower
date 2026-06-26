@@ -10,6 +10,8 @@ export const LogQuerySchema = t.Object({
 	to: t.String({ format: "date-time" }),
 	limit: t.Optional(t.Number({ minimum: 1, maximum: 1000, default: 200 })),
 	cursor: t.Optional(t.String()), // For pagination
+	sortBy: t.Optional(t.Union([t.Literal("timestamp"), t.Literal("level")])),
+	sortDirection: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
 });
 
 export type LogQuery = typeof LogQuerySchema.static;

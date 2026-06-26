@@ -12,8 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
+import { Route as ProtectedSearchRouteImport } from './routes/_protected/search'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected/logs'
-import { Route as ProtectedDummyLogsRouteImport } from './routes/_protected/dummy-logs'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 
@@ -30,14 +30,14 @@ const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedSearchRoute = ProtectedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedDummyLogsRoute = ProtectedDummyLogsRouteImport.update({
-  id: '/dummy-logs',
-  path: '/dummy-logs',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
@@ -55,15 +55,15 @@ export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
-  '/dummy-logs': typeof ProtectedDummyLogsRoute
   '/logs': typeof ProtectedLogsRoute
+  '/search': typeof ProtectedSearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof ProtectedIndexRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
-  '/dummy-logs': typeof ProtectedDummyLogsRoute
   '/logs': typeof ProtectedLogsRoute
+  '/search': typeof ProtectedSearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,23 +71,23 @@ export interface FileRoutesById {
   '/_protected': typeof ProtectedRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/signup': typeof AuthSignupRoute
-  '/_protected/dummy-logs': typeof ProtectedDummyLogsRoute
   '/_protected/logs': typeof ProtectedLogsRoute
+  '/_protected/search': typeof ProtectedSearchRoute
   '/_protected/': typeof ProtectedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup' | '/dummy-logs' | '/logs'
+  fullPaths: '/' | '/login' | '/signup' | '/logs' | '/search'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/dummy-logs' | '/logs'
+  to: '/' | '/login' | '/signup' | '/logs' | '/search'
   id:
     | '__root__'
     | '/_auth'
     | '/_protected'
     | '/_auth/login'
     | '/_auth/signup'
-    | '/_protected/dummy-logs'
     | '/_protected/logs'
+    | '/_protected/search'
     | '/_protected/'
   fileRoutesById: FileRoutesById
 }
@@ -119,18 +119,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedIndexRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/search': {
+      id: '/_protected/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof ProtectedSearchRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/logs': {
       id: '/_protected/logs'
       path: '/logs'
       fullPath: '/logs'
       preLoaderRoute: typeof ProtectedLogsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/dummy-logs': {
-      id: '/_protected/dummy-logs'
-      path: '/dummy-logs'
-      fullPath: '/dummy-logs'
-      preLoaderRoute: typeof ProtectedDummyLogsRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_auth/signup': {
@@ -163,14 +163,14 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface ProtectedRouteChildren {
-  ProtectedDummyLogsRoute: typeof ProtectedDummyLogsRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
+  ProtectedSearchRoute: typeof ProtectedSearchRoute
   ProtectedIndexRoute: typeof ProtectedIndexRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
-  ProtectedDummyLogsRoute: ProtectedDummyLogsRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
+  ProtectedSearchRoute: ProtectedSearchRoute,
   ProtectedIndexRoute: ProtectedIndexRoute,
 }
 

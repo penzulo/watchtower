@@ -19,6 +19,8 @@ export interface QueryParams {
 	to: string;
 	limit: number;
 	cursor?: string;
+	sortBy?: "timestamp" | "level";
+	sortDirection?: "asc" | "desc";
 }
 
 export interface QueryResult {
@@ -53,21 +55,31 @@ export async function queryLogs(params: QueryParams): Promise<QueryResult> {
 		query_params.environment = params.environment;
 	}
 
+	const sortBy = params.sortBy ?? "timestamp";
+	const sortDirection = params.sortDirection === "asc" ? "ASC" : "DESC";
+
 	if (params.cursor) {
 		const [cursorTimestamp, cursorId] = decodeCursor(params.cursor);
+		// Simple cursor logic based on timestamp. If sort is ASC, we want > cursor.
+		const op = sortDirection === "ASC" ? ">" : "<";
 		conditions.push(
-			`(timestamp, id) < ({cursorTimestamp:DateTime64(3)}, {cursorId:String})`,
+			`(timestamp, id) ${op} ({cursorTimestamp:DateTime64(3)}, {cursorId:String})`,
 		);
 		query_params.cursorTimestamp = cursorTimestamp;
 		query_params.cursorId = cursorId;
 	}
+
+	const orderClause =
+		sortBy === "timestamp"
+			? `ORDER BY timestamp ${sortDirection}, id ${sortDirection}`
+			: `ORDER BY ${sortBy} ${sortDirection}, timestamp DESC, id DESC`;
 
 	const result = await getClickhouse().query({
 		query: `
 			SELECT *
 			FROM logs
 			WHERE ${conditions.join(" AND ")}
-			ORDER BY timestamp DESC, id DESC
+			${orderClause}
 			LIMIT {limit:UInt32}
 		`,
 		query_params,
