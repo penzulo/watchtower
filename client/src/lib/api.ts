@@ -8,7 +8,7 @@ import type { App } from "@watchtower/server";
  * at import time. All requests go through `credentials: "include"` so the
  * Better Auth session cookie is forwarded automatically.
  */
-export const api = treaty<App>(
+export const server = treaty<App>(
 	import.meta.env.VITE_SERVER_URL ?? "http://localhost:3000",
 	{
 		fetch: {

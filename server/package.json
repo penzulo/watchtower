@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"dev": "bun run --watch src/index.ts",
+		"build": "tsc && bun run scripts/build.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {

@@ -1,15 +1,16 @@
-import { Glob } from "bun";
+import { readdirSync, readFileSync } from "node:fs";
 
-export async function loadMigrations() {
+export function loadMigrations() {
 	const dir = `${import.meta.dir}/migrations`;
-	const glob = new Glob("*.sql");
-	const files = (await Array.fromAsync(glob.scan({ cwd: dir }))).sort();
+	const files = readdirSync(dir)
+		.filter((f) => f.endsWith(".sql"))
+		.sort();
 
 	const migrations: { name: string; sql: string }[] = [];
 	for (const file of files) {
 		migrations.push({
 			name: file,
-			sql: await Bun.file(`${dir}/${file}`).text(),
+			sql: readFileSync(`${dir}/${file}`, "utf-8"),
 		});
 	}
 	return migrations;

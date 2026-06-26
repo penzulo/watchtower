@@ -9,5 +9,13 @@ export const logLevels = [
 	"fatal",
 ] as const;
 
-export const LogLevel = t.Union(logLevels.map((level) => t.Literal(level)));
+export const LogLevel = t.Union([
+	t.Literal("trace"),
+	t.Literal("debug"),
+	t.Literal("info"),
+	t.Literal("warn"),
+	t.Literal("error"),
+	t.Literal("fatal"),
+]);
+
 export type TLogLevel = Static<typeof LogLevel>;

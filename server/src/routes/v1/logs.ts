@@ -26,7 +26,11 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 				received_at: new Date().toISOString(),
 			};
 
-			await Promise.all([publishLog(record), enqueueLog(record)]);
+			// Fire and forget: leverage Bun.redis auto-pipelining.
+			// We don't await the network round-trip here so the API responds instantly.
+			Promise.all([publishLog(record), enqueueLog(record)]).catch((err) =>
+				console.error("[Redis] Failed to ingest log:", err),
+			);
 
 			set.status = StatusMap.Accepted;
 			return { id: record.id };
@@ -59,10 +63,8 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 			const subscriber = createSubscriber();
 
 			const stream = new ReadableStream({
-				start(controller) {
-					subscriber.subscribe(LOGS_CHANNEL);
-
-					subscriber.on("message", (_, message) => {
+				async start(controller) {
+					await subscriber.subscribe(LOGS_CHANNEL, (message) => {
 						try {
 							// Guard against the race where a PUBLISH fires after the
 							// client has disconnected and the controller is already closed.
@@ -82,7 +84,7 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 				// (Returning a function from start() is NOT part of the spec and is silently ignored.)
 				cancel() {
 					subscriber.unsubscribe(LOGS_CHANNEL);
-					subscriber.quit().catch(() => {});
+					subscriber.close();
 				},
 			});
 

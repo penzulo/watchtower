@@ -27,7 +27,7 @@ export async function runMigrations() {
 	});
 	const executed = (await result.json<{ name: string }>()).map((r) => r.name);
 
-	const allMigrations = await loadMigrations();
+	const allMigrations = loadMigrations();
 
 	let count = 0;
 	for (const migration of allMigrations) {
