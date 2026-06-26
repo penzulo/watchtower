@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"elysia": "latest"
+		"elysia": "1.4.28"
 	},
 	"devDependencies": {
 		"bun-types": "latest",

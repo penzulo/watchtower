@@ -1,6 +1,8 @@
-import { join } from "node:path";
 import { createClient } from "@clickhouse/client";
 import { clickHouseConnectionOptions } from "@watchtower/server/clickhouse/connection";
+import { loadMigrations } from "@watchtower/server/clickhouse/load-migrations" with {
+	type: "macro",
+};
 
 const clickhouse = createClient(clickHouseConnectionOptions);
 
@@ -25,24 +27,18 @@ export async function runMigrations() {
 	});
 	const executed = (await result.json<{ name: string }>()).map((r) => r.name);
 
-	const migrationsDir = join(import.meta.dir, "migrations");
-	const glob = new Bun.Glob("*.sql");
-	const migrationFiles = (
-		await Array.fromAsync(glob.scan(migrationsDir))
-	).sort();
+	const allMigrations = await loadMigrations();
 
 	let count = 0;
-	for (const file of migrationFiles) {
-		if (!executed.includes(file)) {
-			console.log(`Migrating: ${file}`);
-			const filePath = join(migrationsDir, file);
-			const sql = await Bun.file(filePath).text();
+	for (const migration of allMigrations) {
+		if (!executed.includes(migration.name)) {
+			console.log(`Migrating: ${migration.name}`);
 
-			await clickhouse.command({ query: sql });
+			await clickhouse.command({ query: migration.sql });
 
 			await clickhouse.insert({
 				table: "schema_migrations",
-				values: [{ name: file }],
+				values: [{ name: migration.name }],
 				format: "JSONEachRow",
 			});
 			count++;

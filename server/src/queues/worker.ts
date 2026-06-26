@@ -68,8 +68,8 @@ class Batcher<T> {
 }
 
 const logBatcher = new Batcher<LogRecord>(
-	5000, // flush when 5000 logs accumulate...
-	250, // ...or after 250ms, whichever happens first
+	1000, // flush when 1000 logs accumulate...
+	100, // ...or after 100ms, whichever happens first
 	async (batch: LogRecord[]) => {
 		await clickhouse.insert({
 			table: "logs",
@@ -125,7 +125,8 @@ export const logWorker = new Worker(
 		// CRITICAL: Concurrency must be higher than the batch size!
 		// BullMQ pulls this many jobs into memory at once. If concurrency is 10,
 		// the batcher will never see more than 10 jobs at a time.
-		concurrency: 6000,
+		concurrency: 1000,
+		lockDuration: 60_000,
 	},
 );
 

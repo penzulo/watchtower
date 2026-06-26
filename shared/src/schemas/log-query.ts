@@ -1,5 +1,6 @@
-import { AppEnvironmentSchema, LogLevel } from "@watchtower/shared";
 import { t } from "elysia";
+import { AppEnvironmentSchema } from "./environment";
+import { LogLevel } from "./log-level";
 
 export const LogQuerySchema = t.Object({
 	service: t.Optional(t.String({ minLength: 1 })),

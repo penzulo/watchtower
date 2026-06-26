@@ -6,8 +6,11 @@ import {
 	LOGS_CHANNEL,
 	publishLog,
 } from "@watchtower/server/redis";
-import { LogQuerySchema } from "@watchtower/server/schemas/query";
-import { type LogPayload, LogPayloadSchema } from "@watchtower/shared";
+import {
+	type LogPayload,
+	LogPayloadSchema,
+	LogQuerySchema,
+} from "@watchtower/shared";
 import { Elysia, StatusMap } from "elysia";
 
 const MAX_RANGE_MS = 1000 * 60 * 60 * 24 * 30;
@@ -116,8 +119,8 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 							? level
 							: [level],
 				environment: query.environment,
-				from: from.toISOString(),
-				to: to.toISOString(),
+				from: from.toISOString().replace("T", " ").replace("Z", ""),
+				to: to.toISOString().replace("T", " ").replace("Z", ""),
 				limit: Number(query.limit ?? 200),
 				cursor: query.cursor,
 			});

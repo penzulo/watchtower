@@ -13,6 +13,7 @@ import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected/logs'
+import { Route as ProtectedDummyLogsRouteImport } from './routes/_protected/dummy-logs'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 
@@ -34,6 +35,11 @@ const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedDummyLogsRoute = ProtectedDummyLogsRouteImport.update({
+  id: '/dummy-logs',
+  path: '/dummy-logs',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -49,12 +55,14 @@ export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
+  '/dummy-logs': typeof ProtectedDummyLogsRoute
   '/logs': typeof ProtectedLogsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof ProtectedIndexRoute
   '/login': typeof AuthLoginRoute
   '/signup': typeof AuthSignupRoute
+  '/dummy-logs': typeof ProtectedDummyLogsRoute
   '/logs': typeof ProtectedLogsRoute
 }
 export interface FileRoutesById {
@@ -63,20 +71,22 @@ export interface FileRoutesById {
   '/_protected': typeof ProtectedRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/_protected/dummy-logs': typeof ProtectedDummyLogsRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/': typeof ProtectedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup' | '/logs'
+  fullPaths: '/' | '/login' | '/signup' | '/dummy-logs' | '/logs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/logs'
+  to: '/' | '/login' | '/signup' | '/dummy-logs' | '/logs'
   id:
     | '__root__'
     | '/_auth'
     | '/_protected'
     | '/_auth/login'
     | '/_auth/signup'
+    | '/_protected/dummy-logs'
     | '/_protected/logs'
     | '/_protected/'
   fileRoutesById: FileRoutesById
@@ -116,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedLogsRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/dummy-logs': {
+      id: '/_protected/dummy-logs'
+      path: '/dummy-logs'
+      fullPath: '/dummy-logs'
+      preLoaderRoute: typeof ProtectedDummyLogsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_auth/signup': {
       id: '/_auth/signup'
       path: '/signup'
@@ -146,11 +163,13 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface ProtectedRouteChildren {
+  ProtectedDummyLogsRoute: typeof ProtectedDummyLogsRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedIndexRoute: typeof ProtectedIndexRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedDummyLogsRoute: ProtectedDummyLogsRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedIndexRoute: ProtectedIndexRoute,
 }

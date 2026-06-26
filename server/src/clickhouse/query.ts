@@ -1,16 +1,12 @@
 import { createClient } from "@clickhouse/client";
+import { clickHouseConnectionOptions } from "@watchtower/server/clickhouse/connection";
 import type { LogRecord } from "@watchtower/shared";
 
 let _clickhouse: ReturnType<typeof createClient> | null = null;
 
 function getClickhouse(): ReturnType<typeof createClient> {
 	if (!_clickhouse) {
-		_clickhouse = createClient({
-			url: Bun.env.CLICKHOUSE_URL ?? "http://localhost:8123",
-			username: Bun.env.CLICKHOUSE_USERNAME ?? "default",
-			password: Bun.env.CLICKHOUSE_PASSWORD ?? "",
-			database: Bun.env.CLICKHOUSE_DB ?? "watchtower",
-		});
+		_clickhouse = createClient(clickHouseConnectionOptions);
 	}
 	return _clickhouse;
 }

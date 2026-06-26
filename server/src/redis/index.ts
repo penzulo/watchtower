@@ -1,6 +1,8 @@
 import Redis from "ioredis";
 
-const REDIS_URL = Bun.env.REDIS_URL ?? "redis://localhost:6379";
+const REDIS_HOST = Bun.env.REDIS_HOST ?? "localhost";
+const REDIS_PORT = Number(Bun.env.REDIS_PORT ?? 6379);
+const REDIS_PASSWORD = Bun.env.REDIS_PASSWORD ?? "";
 
 /**
  * Base connection options.
@@ -13,13 +15,16 @@ const REDIS_URL = Bun.env.REDIS_URL ?? "redis://localhost:6379";
  *   command is issued, so module import does not eagerly open sockets.
  */
 const BASE_OPTS = {
+	host: REDIS_HOST,
+	port: REDIS_PORT,
+	password: REDIS_PASSWORD,
 	maxRetriesPerRequest: null,
 	enableReadyCheck: false,
 	lazyConnect: true,
 } as const;
 
 function createConnection(label: string): Redis {
-	const conn = new Redis(REDIS_URL, BASE_OPTS);
+	const conn = new Redis(BASE_OPTS);
 	conn.on("error", (err: Error) =>
 		console.error(`[Redis:${label}] ${err.message}`),
 	);
