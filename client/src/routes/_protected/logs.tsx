@@ -1,160 +1,73 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	createColumnHelper,
-	flexRender,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { LogRecord } from "@watchtower/shared";
 import { ArrowDownIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
+import { useLiveLogs } from "@/hooks/use-live-logs";
 
 export const Route = createFileRoute("/_protected/logs")({
 	component: LogsPage,
 });
 
-const columnHelper = createColumnHelper<LogRecord>();
-
-const LEVEL_STYLES: Record<string, string> = {
-	trace: "bg-slate-500",
-	debug: "bg-blue-500",
-	info: "bg-green-500",
-	warn: "bg-yellow-500",
-	error: "bg-red-500",
-	fatal: "bg-red-900 animate-pulse",
+const LEVEL_COLORS: Record<string, string> = {
+	trace: "text-slate-400",
+	debug: "text-blue-400",
+	info: "text-green-400",
+	warn: "text-yellow-400",
+	error: "text-red-400",
+	fatal: "text-red-300",
 };
 
-const columns = [
-	columnHelper.accessor("timestamp", {
-		header: "Time",
-		cell: (info) => {
-			const date = new Date(info.getValue());
-			return (
-				<span className="whitespace-nowrap font-mono text-xs text-muted-foreground">
-					{date.toLocaleTimeString([], { hour12: false })}
-					<span className="opacity-50">
-						.{date.getMilliseconds().toString().padStart(3, "0")}
-					</span>
-				</span>
-			);
-		},
-		size: 110,
-	}),
-	columnHelper.accessor("level", {
-		header: "Level",
-		cell: (info) => {
-			const level = info.getValue();
-			return (
-				<Badge
-					variant="outline"
-					className={`border-transparent font-mono text-xs uppercase text-white ${LEVEL_STYLES[level] ?? "bg-gray-500"}`}
-				>
-					{level}
-				</Badge>
-			);
-		},
-		size: 75,
-	}),
-	columnHelper.accessor("service", {
-		header: "Service",
-		cell: (info) => (
-			<span className="font-medium text-foreground">{info.getValue()}</span>
-		),
-		size: 140,
-	}),
-	columnHelper.accessor("environment", {
-		header: "Env",
-		cell: (info) => (
-			<span className="font-mono text-xs text-muted-foreground">
-				{info.getValue()}
-			</span>
-		),
-		size: 90,
-	}),
-	columnHelper.accessor("message", {
-		header: "Message",
-		cell: (info) => (
-			<span className="font-mono text-xs">{info.getValue()}</span>
-		),
-	}),
-];
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const MAX_LOGS = 50_000;
+const MAX_LOGS = 2_000;
 const SCROLL_THRESHOLD_PX = 80;
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 function LogsPage() {
-	const [logs, setLogs] = useState<LogRecord[]>([]);
-	const [pendingCount, setPendingCount] = useState(0);
-	const [isLive, _setIsLive] = useState(true);
-
-	const isLiveRef = useRef(true);
-	const pendingRef = useRef<LogRecord[]>([]);
-	const incomingRef = useRef<LogRecord[]>([]);
+	const {
+		logs,
+		status,
+		metrics,
+		isPaused,
+		pause,
+		resume,
+		isFollowing,
+		setIsFollowing,
+		clear,
+	} = useLiveLogs({
+		url: `${import.meta.env.VITE_SERVER_URL ?? "http://localhost:3000"}/api/v1/logs/stream`,
+		capacity: MAX_LOGS,
+		flushInterval: 100,
+	});
 
 	const parentRef = useRef<HTMLDivElement>(null);
 	const isScrollingProgrammatically = useRef(false);
 
-	const setIsLive = useCallback((value: boolean) => {
-		isLiveRef.current = value;
-		_setIsLive(value);
-	}, []);
-
-	const table = useReactTable({
-		data: logs,
-		columns,
-		getCoreRowModel: getCoreRowModel(),
-		getRowId: (row) => row.id,
-	});
-
-	const { rows } = table.getRowModel();
-
 	const rowVirtualizer = useVirtualizer({
-		count: rows.length,
+		count: logs.length,
 		getScrollElement: () => parentRef.current,
-		estimateSize: () => 36,
+		estimateSize: () => 36, // approximate height of a single log row
 		overscan: 15,
 	});
 
 	const virtualRows = rowVirtualizer.getVirtualItems();
 	const totalSize = rowVirtualizer.getTotalSize();
 
-	const paddingTop = virtualRows.length > 0 ? (virtualRows[0]?.start ?? 0) : 0;
-	const paddingBottom =
-		virtualRows.length > 0
-			? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
-			: 0;
-
 	// ── Scroll helpers ────────────────────────────────────────────────────────
 
 	const scrollToBottom = useCallback(() => {
-		if (rows.length === 0) return;
+		if (logs.length === 0) return;
 		isScrollingProgrammatically.current = true;
-		rowVirtualizer.scrollToIndex(rows.length - 1, { behavior: "auto" });
+		rowVirtualizer.scrollToIndex(logs.length - 1, { behavior: "auto" });
 		requestAnimationFrame(() => {
 			isScrollingProgrammatically.current = false;
 		});
-	}, [rowVirtualizer, rows.length]);
+	}, [rowVirtualizer, logs.length]);
 
-	// Auto-scroll whenever the logs array grows while live
+	// Auto-scroll whenever the logs array grows while following
 	useEffect(() => {
-		if (isLive && logs.length > 0) scrollToBottom();
-	}, [logs.length, isLive, scrollToBottom]);
+		if (isFollowing && logs.length > 0) scrollToBottom();
+	}, [logs.length, isFollowing, scrollToBottom]);
 
-	// Scroll detection — sets isLive=false when user scrolls up manually
+	// Scroll detection — stops following when user scrolls up manually
 	const handleScroll = useCallback(() => {
 		if (isScrollingProgrammatically.current) return;
 		if (!parentRef.current) return;
@@ -163,95 +76,22 @@ function LogsPage() {
 		const atBottom =
 			scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD_PX;
 
-		if (!atBottom && isLiveRef.current) {
-			setIsLive(false);
-		} else if (
-			atBottom &&
-			!isLiveRef.current &&
-			pendingRef.current.length === 0
-		) {
-			setIsLive(true);
+		if (!atBottom && isFollowing) {
+			setIsFollowing(false);
+		} else if (atBottom && !isFollowing) {
+			setIsFollowing(true);
 		}
-	}, [setIsLive]);
+	}, [isFollowing, setIsFollowing]);
 
 	// ── Go Live / Jump to bottom ──────────────────────────────────────────────
 
 	const handleGoLive = useCallback(() => {
-		// Flush any incoming buffer first so we don't lose in-flight messages
-		const incoming = incomingRef.current.splice(0);
-		const pending = pendingRef.current.splice(0);
-		setPendingCount(0);
-
-		const toAdd = [...incoming, ...pending];
-		if (toAdd.length > 0) {
-			setLogs((prev) => {
-				const next = [...prev, ...toAdd];
-				return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
-			});
+		if (isPaused) {
+			resume();
 		}
-
-		setIsLive(true);
+		setIsFollowing(true);
 		requestAnimationFrame(() => scrollToBottom());
-	}, [setIsLive, scrollToBottom]);
-
-	// ── RAF batch flush — the core performance fix ────────────────────────────
-	//
-	// Instead of calling setLogs() on every SSE message (up to 800×/sec),
-	// we accumulate new records into `incomingRef` and flush them to state
-	// at most once per animation frame (~60×/sec).
-	//
-	// This collapses up to ~13 individual setState calls into a single batch
-	// per frame, cutting React reconciliation work by ~13× and eliminating
-	// the lag under heavy ingestion.
-	useEffect(() => {
-		let rafId: number;
-
-		const flush = () => {
-			if (isLiveRef.current && incomingRef.current.length > 0) {
-				const batch = incomingRef.current.splice(0); // drain atomically
-				setLogs((prev) => {
-					const next = [...prev, ...batch];
-					return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
-				});
-			}
-			rafId = requestAnimationFrame(flush);
-		};
-
-		rafId = requestAnimationFrame(flush);
-		return () => cancelAnimationFrame(rafId);
-	}, []);
-
-	// ── SSE connection ────────────────────────────────────────────────────────
-
-	useEffect(() => {
-		const url = `${import.meta.env.VITE_SERVER_URL ?? "http://localhost:3000"}/api/v1/logs/stream`;
-		const source = new EventSource(url, { withCredentials: true });
-
-		source.onmessage = (event: MessageEvent<string>) => {
-			let record: LogRecord;
-			try {
-				record = JSON.parse(event.data) as LogRecord;
-			} catch {
-				console.warn("[SSE] Failed to parse:", event.data);
-				return;
-			}
-
-			if (isLiveRef.current) {
-				// Push into the incoming buffer; the RAF loop flushes this to state
-				incomingRef.current.push(record);
-			} else {
-				// Buffer pending without touching state; only the count triggers a render
-				pendingRef.current.push(record);
-				setPendingCount(pendingRef.current.length);
-			}
-		};
-
-		source.onerror = () => {
-			console.warn("[SSE] Connection lost — browser will retry automatically.");
-		};
-
-		return () => source.close();
-	}, []);
+	}, [isPaused, resume, setIsFollowing, scrollToBottom]);
 
 	return (
 		<main className="flex h-svh flex-col bg-background">
@@ -265,124 +105,93 @@ function LogsPage() {
 				</div>
 				<div className="flex items-center gap-4 text-sm text-muted-foreground">
 					<span>{logs.length.toLocaleString()} logs</span>
-					<div className="flex items-center gap-2">
-						<span className="relative flex h-3 w-3">
-							<span
-								className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-									isLive ? "animate-ping bg-green-400" : "bg-muted-foreground"
-								}`}
-							/>
-							<span
-								className={`relative inline-flex h-3 w-3 rounded-full ${
-									isLive ? "bg-green-500" : "bg-muted-foreground"
-								}`}
-							/>
-						</span>
-						<span>{isLive ? "Live" : "Paused"}</span>
+					<div className="flex items-center gap-4">
+						<div className="text-xs text-muted-foreground font-mono">
+							{metrics.receivedPerSecond} logs/sec
+						</div>
+						<div className="flex items-center gap-2">
+							<span className="relative flex h-3 w-3">
+								<span
+									className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+										status === "connected" && !isPaused
+											? "animate-ping bg-green-400"
+											: "bg-muted-foreground"
+									}`}
+								/>
+								<span
+									className={`relative inline-flex h-3 w-3 rounded-full ${
+										status === "connected" && !isPaused
+											? "bg-green-500"
+											: "bg-muted-foreground"
+									}`}
+								/>
+							</span>
+							<span>
+								{isPaused ? "Paused" : status === "connected" ? "Live" : status}
+							</span>
+						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => (isPaused ? resume() : pause())}
+						>
+							{isPaused ? "Resume" : "Pause"}
+						</Button>
+						<Button variant="outline" size="sm" onClick={clear}>
+							Clear
+						</Button>
 					</div>
 				</div>
 			</header>
 
-			{/* ── Table area ──────────────────────────────────────────────────── */}
+			{/* ── Log List area ──────────────────────────────────────────────────── */}
 			<div className="relative flex-1 overflow-hidden p-4">
 				<div
 					ref={parentRef}
 					onScroll={handleScroll}
-					className="h-full overflow-auto rounded-md border bg-card"
+					className="h-full w-full overflow-auto rounded-md border bg-card font-mono text-xs"
 				>
-					<table className="w-full caption-bottom text-sm">
-						<TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_hsl(var(--border))]">
-							{table.getHeaderGroups().map((headerGroup) => (
-								<TableRow key={headerGroup.id} className="hover:bg-transparent">
-									{headerGroup.headers.map((header) => (
-										<TableHead
-											key={header.id}
-											style={{ width: header.column.getSize() }}
-											className="bg-card font-semibold text-foreground"
-										>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-														header.column.columnDef.header,
-														header.getContext(),
-													)}
-										</TableHead>
-									))}
-								</TableRow>
-							))}
-						</TableHeader>
+					<div className="relative w-full" style={{ height: `${totalSize}px` }}>
+						{virtualRows.map((virtualRow) => {
+							const log = logs[virtualRow.index];
+							if (!log) return null;
 
-						<TableBody>
-							{paddingTop > 0 && (
-								<tr>
-									<td style={{ height: paddingTop }} />
-								</tr>
-							)}
+							const date = new Date(log.timestamp);
+							const timeStr = date.toLocaleTimeString([], { hour12: false });
+							const msStr = date.getMilliseconds().toString().padStart(3, "0");
+							const level = log.level.toUpperCase().padEnd(5);
+							const color = LEVEL_COLORS[log.level] ?? "text-muted-foreground";
 
-							{virtualRows.map((virtualRow) => {
-								const row = rows[virtualRow.index];
-								if (!row) return null;
-								return (
-									<TableRow
-										key={row.id}
-										data-index={virtualRow.index}
-										ref={rowVirtualizer.measureElement}
-										className="border-b border-border/40 transition-colors hover:bg-muted/50"
-									>
-										{row.getVisibleCells().map((cell) => (
-											<TableCell
-												key={cell.id}
-												style={{ width: cell.column.getSize() }}
-												className="py-2"
-											>
-												{flexRender(
-													cell.column.columnDef.cell,
-													cell.getContext(),
-												)}
-											</TableCell>
-										))}
-									</TableRow>
-								);
-							})}
+							return (
+								<pre
+									key={virtualRow.index}
+									data-index={virtualRow.index}
+									ref={rowVirtualizer.measureElement}
+									className={`absolute top-0 left-0 w-full px-4 py-0.5 leading-5 hover:bg-muted/40 ${color}`}
+									style={{ transform: `translateY(${virtualRow.start}px)` }}
+								>
+									{`${timeStr}.${msStr} ${level} [${log.service}] ${log.message}`}
+								</pre>
+							);
+						})}
 
-							{paddingBottom > 0 && (
-								<tr>
-									<td style={{ height: paddingBottom }} />
-								</tr>
-							)}
-
-							{logs.length === 0 && (
-								<TableRow>
-									<TableCell
-										colSpan={columns.length}
-										className="h-24 text-center text-muted-foreground"
-									>
-										Waiting for logs…
-									</TableCell>
-								</TableRow>
-							)}
-						</TableBody>
-					</table>
+						{logs.length === 0 && (
+							<div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+								Waiting for logs…
+							</div>
+						)}
+					</div>
 				</div>
 
-				{/*
-				 * Floating action button — two states:
-				 *
-				 * 1. Paused + pending logs → "X new logs" (flush + go live)
-				 * 2. Paused + no pending   → "Jump to latest" (scroll + go live)
-				 *
-				 * Neither shows when isLive=true AND user is at the bottom.
-				 */}
-				{!isLive && (
+				{/* Floating action button */}
+				{!isFollowing && (
 					<div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2">
 						<Button
 							onClick={handleGoLive}
 							className="animate-in fade-in slide-in-from-bottom-3 flex items-center gap-2 rounded-full px-5 shadow-xl"
 						>
 							<ArrowDownIcon className="h-4 w-4" />
-							{pendingCount > 0
-								? `${pendingCount.toLocaleString()} new logs`
-								: "Jump to latest"}
+							Jump to latest
 						</Button>
 					</div>
 				)}

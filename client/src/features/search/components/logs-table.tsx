@@ -1,92 +1,90 @@
-import {
-	createColumnHelper,
-	flexRender,
-	getCoreRowModel,
-	type SortingState,
-	useReactTable,
-} from "@tanstack/react-table";
 import type { LogQuery, LogRecord } from "@watchtower/shared";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { Route } from "@/routes/_protected/search";
 
-const columnHelper = createColumnHelper<LogRecord>();
-const LEVEL_STYLES: Record<string, string> = {
-	trace: "bg-slate-500",
-	debug: "bg-blue-500",
-	info: "bg-green-500",
-	warn: "bg-yellow-500",
-	error: "bg-red-500",
-	fatal: "bg-red-900",
+const LEVEL_COLORS: Record<string, string> = {
+	trace: "text-slate-400",
+	debug: "text-blue-400",
+	info: "text-green-400",
+	warn: "text-yellow-400",
+	error: "text-red-400",
+	fatal: "text-red-300",
 };
 
-const columns = [
-	columnHelper.accessor("timestamp", {
-		header: "Time",
-		enableSorting: true,
-		cell: (info) => {
-			const date = new Date(info.getValue());
-			return (
-				<span className="whitespace-nowrap font-mono text-xs text-muted-foreground">
-					{date.toLocaleTimeString([], { hour12: false })}
-					<span className="opacity-50">
-						.{date.getMilliseconds().toString().padStart(3, "0")}
-					</span>
+function LogRow({ log }: { log: LogRecord }) {
+	const [expanded, setExpanded] = useState(false);
+
+	const date = new Date(log.timestamp);
+	const timeStr = date.toLocaleTimeString([], { hour12: false });
+	const msStr = date.getMilliseconds().toString().padStart(3, "0");
+	const level = log.level.toUpperCase().padEnd(5);
+	const color = LEVEL_COLORS[log.level] ?? "text-muted-foreground";
+
+	return (
+		<li>
+			{/* Summary row — one click toggles detail panel */}
+			<button
+				type="button"
+				aria-expanded={expanded}
+				onClick={() => setExpanded((v) => !v)}
+				className={`flex w-full items-center gap-2 px-4 py-0.5 text-left font-mono text-xs leading-5 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${color}`}
+			>
+				<span className="shrink-0 opacity-50">
+					{expanded ? (
+						<ChevronUp className="h-3 w-3" />
+					) : (
+						<ChevronDown className="h-3 w-3" />
+					)}
 				</span>
-			);
-		},
-		size: 110,
-	}),
-	columnHelper.accessor("level", {
-		header: "Level",
-		enableSorting: true,
-		cell: (info) => {
-			const level = info.getValue();
-			return (
-				<Badge
-					variant="outline"
-					className={`border-transparent font-mono text-xs uppercase text-white ${LEVEL_STYLES[level] ?? "bg-gray-500"}`}
+				<span className="truncate">
+					{`${timeStr}.${msStr} ${level} [${log.service}] ${log.message}`}
+				</span>
+			</button>
+
+			{/* Detail panel — only rendered when expanded */}
+			{expanded && (
+				<section
+					aria-label={`Details for log ${log.id}`}
+					className="border-b border-border/40 bg-muted/20 px-4 py-3"
 				>
-					{level}
-				</Badge>
-			);
-		},
-		size: 75,
-	}),
-	columnHelper.accessor("service", {
-		header: "Service",
-		enableSorting: false,
-		cell: (info) => (
-			<span className="font-medium text-foreground">{info.getValue()}</span>
-		),
-		size: 140,
-	}),
-	columnHelper.accessor("environment", {
-		header: "Env",
-		enableSorting: false,
-		cell: (info) => (
-			<span className="font-mono text-xs text-muted-foreground">
-				{info.getValue()}
-			</span>
-		),
-		size: 90,
-	}),
-	columnHelper.accessor("message", {
-		header: "Message",
-		enableSorting: false,
-		cell: (info) => (
-			<span className="font-mono text-xs">{info.getValue()}</span>
-		),
-	}),
-];
+					<dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-xs">
+						<dt className="text-muted-foreground">id</dt>
+						<dd>{log.id}</dd>
+						<dt className="text-muted-foreground">timestamp</dt>
+						<dd>{log.timestamp}</dd>
+						<dt className="text-muted-foreground">level</dt>
+						<dd className={color}>{log.level}</dd>
+						<dt className="text-muted-foreground">service</dt>
+						<dd>{log.service}</dd>
+						<dt className="text-muted-foreground">environment</dt>
+						<dd>{log.environment}</dd>
+						<dt className="text-muted-foreground">message</dt>
+						<dd className="break-all">{log.message}</dd>
+						{log.received_at && (
+							<>
+								<dt className="text-muted-foreground">received_at</dt>
+								<dd>{log.received_at}</dd>
+							</>
+						)}
+					</dl>
+
+					{log.extras && Object.keys(log.extras).length > 0 && (
+						<details open>
+							<summary className="mb-1 cursor-pointer font-mono text-xs text-muted-foreground select-none hover:text-foreground">
+								extras
+							</summary>
+							<pre className="overflow-auto rounded bg-card p-3 text-xs leading-relaxed">
+								{JSON.stringify(log.extras, null, 2)}
+							</pre>
+						</details>
+					)}
+				</section>
+			)}
+		</li>
+	);
+}
 
 export function LogsTable({
 	data,
@@ -98,132 +96,67 @@ export function LogsTable({
 	const navigate = Route.useNavigate();
 	const search = Route.useSearch();
 
-	const sorting: SortingState = search.sortBy
-		? [{ id: search.sortBy, desc: search.sortDirection === "desc" }]
-		: [{ id: "timestamp", desc: true }];
+	const isSortedAsc =
+		search.sortBy === "timestamp" && search.sortDirection === "asc";
 
-	const table = useReactTable({
-		data,
-		columns,
-		getCoreRowModel: getCoreRowModel(),
-		manualSorting: true,
-		state: {
-			sorting,
-		},
-		onSortingChange: (updater) => {
-			const newSorting =
-				typeof updater === "function" ? updater(sorting) : updater;
-			const sort = newSorting[0];
-
-			navigate({
-				search: (old: LogQuery) => ({
-					...old,
-					sortBy: (sort?.id as "timestamp" | "level") || undefined,
-					sortDirection: sort ? (sort.desc ? "desc" : "asc") : undefined,
-					cursor: undefined, // reset pagination on sort change
-				}),
-			});
-		},
-	});
+	const toggleSort = () => {
+		navigate({
+			search: (old: LogQuery) => ({
+				...old,
+				sortBy: "timestamp" as const,
+				sortDirection: isSortedAsc ? "desc" : "asc",
+				cursor: undefined,
+			}),
+		});
+	};
 
 	return (
-		<div className="flex h-full flex-col">
-			<table className="w-full caption-bottom text-sm flex-1">
-				<TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_hsl(var(--border))]">
-					{table.getHeaderGroups().map((headerGroup) => (
-						<TableRow key={headerGroup.id} className="hover:bg-transparent">
-							{headerGroup.headers.map((header) => {
-								const isSorted = header.column.getIsSorted();
-								return (
-									<TableHead
-										key={header.id}
-										style={{ width: header.column.getSize() }}
-										className="bg-card font-semibold text-foreground group"
-									>
-										{header.isPlaceholder ? null : header.column.getCanSort() ? (
-											<button
-												type="button"
-												className="flex items-center gap-1 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-												onClick={header.column.getToggleSortingHandler()}
-											>
-												{flexRender(
-													header.column.columnDef.header,
-													header.getContext(),
-												)}
-												<span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-													{isSorted === "asc" ? (
-														<ArrowUp className="h-3 w-3 opacity-100" />
-													) : isSorted === "desc" ? (
-														<ArrowDown className="h-3 w-3 opacity-100" />
-													) : (
-														<ArrowUpDown className="h-3 w-3 text-muted-foreground" />
-													)}
-												</span>
-											</button>
-										) : (
-											<div className="flex items-center gap-1">
-												{flexRender(
-													header.column.columnDef.header,
-													header.getContext(),
-												)}
-											</div>
-										)}
-									</TableHead>
-								);
-							})}
-						</TableRow>
-					))}
-				</TableHeader>
-				<TableBody>
-					{table.getRowModel().rows.map((row) => (
-						<TableRow
-							key={row.original.id}
-							className="border-b border-border/40 transition-colors hover:bg-muted/50"
-						>
-							{row.getVisibleCells().map((cell) => (
-								<TableCell
-									key={cell.id}
-									style={{ width: cell.column.getSize() }}
-									className="py-2"
-								>
-									{flexRender(cell.column.columnDef.cell, cell.getContext())}
-								</TableCell>
-							))}
-						</TableRow>
-					))}
-					{data.length === 0 && (
-						<TableRow>
-							<TableCell colSpan={columns.length} className="h-24 text-center">
-								No results found.
-							</TableCell>
-						</TableRow>
-					)}
-				</TableBody>
-			</table>
-			<div className="border-t p-4 flex items-center justify-between bg-card sticky bottom-0">
-				<div className="text-sm text-muted-foreground">
-					Showing {data.length} results
-				</div>
-				<div className="flex gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={!nextCursor}
-						onClick={() => {
-							if (nextCursor) {
-								navigate({
-									search: (old: LogQuery) => ({
-										...old,
-										cursor: nextCursor,
-									}),
-								});
-							}
-						}}
-					>
-						Next Page
-					</Button>
-				</div>
-			</div>
-		</div>
+		<section className="flex h-full flex-col">
+			{/* Toolbar */}
+			<header className="flex items-center gap-2 border-b bg-card px-4 py-2">
+				<button
+					type="button"
+					onClick={toggleSort}
+					className="font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1"
+				>
+					time {isSortedAsc ? "↑" : "↓"}
+				</button>
+			</header>
+
+			{/* Log list */}
+			<ol className="flex-1 overflow-auto font-mono text-xs">
+				{data.length === 0 ? (
+					<li className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+						No results found.
+					</li>
+				) : (
+					data.map((log) => <LogRow key={log.id} log={log} />)
+				)}
+			</ol>
+
+			{/* Pagination footer */}
+			<footer className="sticky bottom-0 flex items-center justify-between border-t bg-card px-4 py-3">
+				<span className="text-sm text-muted-foreground">
+					{data.length} result{data.length !== 1 ? "s" : ""}
+				</span>
+				<Button
+					variant="outline"
+					size="sm"
+					disabled={!nextCursor}
+					onClick={() => {
+						if (nextCursor) {
+							navigate({
+								search: (old: LogQuery) => ({
+									...old,
+									cursor: nextCursor,
+								}),
+							});
+						}
+					}}
+				>
+					Next page
+				</Button>
+			</footer>
+		</section>
 	);
 }

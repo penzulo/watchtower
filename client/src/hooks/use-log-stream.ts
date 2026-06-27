@@ -77,6 +77,10 @@ export function useLogStream({
 		};
 
 		es.onmessage = (event) => {
+			// Some backends don't fire 'open' events reliably.
+			// If we get a message, we are definitely connected.
+			setStatus("connected");
+
 			try {
 				const log = JSON.parse(event.data) as LogRecord;
 				incomingQueueRef.current.push(log);

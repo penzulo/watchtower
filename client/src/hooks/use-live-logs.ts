@@ -3,8 +3,8 @@ import {
 	useLogStream,
 } from "@watchtower/client/hooks/use-log-stream";
 import type { LogRecord } from "@watchtower/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRingBuffer } from "@/hooks/use-ring-buffer";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RingBuffer } from "@/lib/ring-buffer";
 
 export interface UseLiveLogsOptions extends UseLogStreamOptions {
 	/** Maximum number of logs to keep in memory */
@@ -25,9 +25,23 @@ export function useLiveLogs({
 		withCredentials,
 	});
 
-	// The storage layer
-	const { pushMany, toArray, clear, version } =
-		useRingBuffer<LogRecord>(capacity);
+	// The storage layer — owned entirely here so version increments
+	// cause THIS component to re-render, not a child hook.
+	const bufferRef = useRef(new RingBuffer<LogRecord>(capacity));
+	const [version, setVersion] = useState(0);
+
+	const pushMany = useCallback((items: LogRecord[]) => {
+		if (items.length === 0) return;
+		bufferRef.current.pushMany(items);
+		setVersion((v) => v + 1);
+	}, []);
+
+	const toArray = useCallback(() => bufferRef.current.toArray(), []);
+
+	const clear = useCallback(() => {
+		bufferRef.current.clear();
+		setVersion((v) => v + 1);
+	}, []);
 
 	// The orchestration layer (triggers renders for controls)
 	const [isPaused, setIsPaused] = useState(false);
@@ -35,9 +49,7 @@ export function useLiveLogs({
 
 	// Ingestion flush cycle
 	useEffect(() => {
-		if (isPaused || status !== "connected") {
-			return;
-		}
+		if (isPaused) return;
 
 		const interval = setInterval(() => {
 			const batch = consume();
@@ -47,7 +59,7 @@ export function useLiveLogs({
 		}, flushInterval);
 
 		return () => clearInterval(interval);
-	}, [consume, isPaused, flushInterval, status, pushMany]);
+	}, [consume, isPaused, flushInterval, pushMany]);
 
 	// Controls
 	const pause = useCallback(() => {
@@ -72,11 +84,11 @@ export function useLiveLogs({
 		}
 	}, [isPaused, pause, resume]);
 
-	// Extracting values from the ring buffer is expensive if done on every render.
-	// Only compute the flat array when the version increments.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Version change triggers recomputation
+	// Only recompute the flat array snapshot when the version increments.
 	const logs = useMemo(() => {
+		void version; // read to track the dependency
 		return toArray();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [version, toArray]);
 
 	return {
