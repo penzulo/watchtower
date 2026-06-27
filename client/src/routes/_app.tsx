@@ -19,11 +19,7 @@ export const Route = createFileRoute("/_app")({
 	component: AppLayout,
 });
 
-const NAV_ITEMS = [
-	{ to: "/overview", label: "Overview", icon: SquareTerminal, exact: true },
-	{ to: "/logs", label: "Live logs", icon: Activity, exact: false },
-	{ to: "/search", label: "Search", icon: Search, exact: false },
-] as const;
+
 
 function AppLayout() {
 	return (
@@ -31,9 +27,10 @@ function AppLayout() {
 			<Sidebar collapsible="icon" className="border-r border-border/60">
 				<SidebarHeader className="border-b border-border/60">
 					<Link to="/" className="flex items-center gap-2 px-2 py-1.5">
-						<span
-							aria-hidden
-							className="inline-flex h-2 w-2 shrink-0 rounded-full bg-[oklch(0.75_0.18_152)] shadow-[0_0_8px_oklch(0.75_0.18_152)]"
+						<img
+							src="/favicon.svg"
+							alt="Watchtower"
+							className="size-5 shrink-0"
 						/>
 						<h1 className="font-mono text-sm font-medium tracking-tight text-foreground">
 							watchtower
@@ -45,20 +42,49 @@ function AppLayout() {
 					<SidebarGroup>
 						<SidebarGroupContent>
 							<SidebarMenu>
-								{NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => (
-									<SidebarMenuItem key={to}>
-										<SidebarMenuButton asChild>
-											<Link
-												to={to}
-												activeOptions={{ exact }}
-												activeProps={{ "data-active": true }}
-											>
-												<Icon className="size-4" />
-												<span>{label}</span>
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								))}
+								<SidebarMenuItem>
+									<SidebarMenuButton asChild>
+										<Link
+											to="/overview"
+											activeOptions={{ exact: true }}
+											activeProps={{ "data-active": true }}
+										>
+											<SquareTerminal className="size-4" />
+											<span>Overview</span>
+										</Link>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+								
+								<SidebarMenuItem>
+									<SidebarMenuButton asChild>
+										<Link
+											to="/logs"
+											activeOptions={{ exact: false }}
+											activeProps={{ "data-active": true }}
+										>
+											<Activity className="size-4" />
+											<span>Live logs</span>
+										</Link>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+								
+								<SidebarMenuItem>
+									<SidebarMenuButton asChild>
+										<Link
+											to="/search"
+											search={{
+												from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+												to: new Date().toISOString(),
+												limit: 50,
+											}}
+											activeOptions={{ exact: false }}
+											activeProps={{ "data-active": true }}
+										>
+											<Search className="size-4" />
+											<span>Search</span>
+										</Link>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
 							</SidebarMenu>
 						</SidebarGroupContent>
 					</SidebarGroup>
