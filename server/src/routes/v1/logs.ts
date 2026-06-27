@@ -11,7 +11,7 @@ import {
 	LogPayloadSchema,
 	LogQuerySchema,
 } from "@watchtower/shared";
-import { Elysia, StatusMap } from "elysia";
+import { Elysia, StatusMap, t } from "elysia";
 
 const MAX_RANGE_MS = 1000 * 60 * 60 * 24 * 30;
 
@@ -42,6 +42,49 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 					enqueueDead({
 						raw: error,
 						error: "Validation failed",
+						received_at: new Date().toISOString(),
+					});
+					set.status = StatusMap["Unprocessable Content"];
+					return { message: "Validation failed", errors: error };
+				}
+			},
+		},
+	)
+	.post(
+		"/batch",
+		async ({ body, set }) => {
+			const payloads = body as LogPayload[];
+
+			const records = payloads.map((payload) => ({
+				...payload,
+				id: crypto.randomUUID(),
+				received_at: new Date().toISOString(),
+			}));
+
+			// Fire and forget batch ingestion
+			const promises = [];
+			for (const record of records) {
+				promises.push(publishLog(record));
+				promises.push(enqueueLog(record));
+			}
+
+			Promise.all(promises).catch((err) =>
+				console.error("[Redis] Failed to ingest log batch:", err),
+			);
+
+			set.status = StatusMap.Accepted;
+			return {
+				message: `Accepted ${records.length} logs`,
+				count: records.length,
+			};
+		},
+		{
+			body: t.Array(LogPayloadSchema, { maxItems: 2000 }),
+			error({ code, error, set }) {
+				if (code === "VALIDATION") {
+					enqueueDead({
+						raw: error,
+						error: "Batch validation failed",
 						received_at: new Date().toISOString(),
 					});
 					set.status = StatusMap["Unprocessable Content"];
@@ -81,10 +124,22 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 				// cancel() is the correct ReadableStream lifecycle hook for cleanup.
 				// It fires when: the client disconnects, the response is aborted,
 				// or the stream is explicitly cancelled.
-				// (Returning a function from start() is NOT part of the spec and is silently ignored.)
-				cancel() {
-					subscriber.unsubscribe(LOGS_CHANNEL);
-					subscriber.close();
+				async cancel() {
+					try {
+						// Must await unsubscribe so bun:redis completes the UNSUBSCRIBE
+						// handshake with the server before we tear down the connection.
+						// Calling close() immediately after unsubscribe() (without awaiting)
+						// destroys the socket mid-handshake and throws ERR_REDIS_CONNECTION_CLOSED.
+						await subscriber.unsubscribe(LOGS_CHANNEL);
+					} catch {
+						// Already disconnected or unsubscribe failed — safe to ignore.
+					} finally {
+						try {
+							subscriber.close();
+						} catch {
+							// Connection already gone — nothing to do.
+						}
+					}
 				},
 			});
 
