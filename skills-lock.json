@@ -1,11 +1,35 @@
 {
-  "version": 1,
-  "skills": {
-    "elysiajs": {
-      "source": "elysiajs/skills",
-      "sourceType": "github",
-      "skillPath": "elysia/SKILL.md",
-      "computedHash": "55268e69a2c766ed67e56a0db57544f60cc52dba0c7f024a974baf965e525e1b"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"better-auth-best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"skillPath": "better-auth/best-practices/SKILL.md",
+			"computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
+		},
+		"create-auth-skill": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"skillPath": "better-auth/create-auth/SKILL.md",
+			"computedHash": "31c027d02dbf1faa37f58191f574b9443143042fb2b684fe32df53ab0270487c"
+		},
+		"elysiajs": {
+			"source": "elysiajs/skills",
+			"sourceType": "github",
+			"skillPath": "elysia/SKILL.md",
+			"computedHash": "55268e69a2c766ed67e56a0db57544f60cc52dba0c7f024a974baf965e525e1b"
+		},
+		"modern-web-guidance": {
+			"source": "GoogleChrome/modern-web-guidance",
+			"sourceType": "github",
+			"skillPath": "skills/modern-web-guidance/SKILL.md",
+			"computedHash": "9f4a50b16567d3e146014ca1e36cf31d11a9b28468eebdbbbee06ffe3b08dda8"
+		},
+		"shadcn": {
+			"source": "shadcn/ui",
+			"sourceType": "github",
+			"skillPath": "skills/shadcn/SKILL.md",
+			"computedHash": "ac9d0d69caac7de1d1e5647f3db3bcd2f13af355d6b3a78780fbf7fc80e8dca0"
+		}
+	}
 }
