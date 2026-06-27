@@ -59,14 +59,18 @@ export async function queryLogs(params: QueryParams): Promise<QueryResult> {
 	const sortDirection = params.sortDirection === "asc" ? "ASC" : "DESC";
 
 	if (params.cursor) {
-		const [cursorTimestamp, cursorId] = decodeCursor(params.cursor);
-		// Simple cursor logic based on timestamp. If sort is ASC, we want > cursor.
-		const op = sortDirection === "ASC" ? ">" : "<";
-		conditions.push(
-			`(timestamp, id) ${op} ({cursorTimestamp:DateTime64(3)}, {cursorId:String})`,
-		);
-		query_params.cursorTimestamp = cursorTimestamp;
-		query_params.cursorId = cursorId;
+		try {
+			const [cursorTimestamp, cursorId] = decodeCursor(params.cursor);
+			// Simple cursor logic based on timestamp. If sort is ASC, we want > cursor.
+			const op = sortDirection === "ASC" ? ">" : "<";
+			conditions.push(
+				`(timestamp, id) ${op} ({cursorTimestamp:DateTime64(3)}, {cursorId:String})`,
+			);
+			query_params.cursorTimestamp = cursorTimestamp;
+			query_params.cursorId = cursorId;
+		} catch {
+			console.warn("Invalid cursor passed, ignoring:", params.cursor);
+		}
 	}
 
 	const orderClause =
@@ -98,10 +102,28 @@ export async function queryLogs(params: QueryParams): Promise<QueryResult> {
 }
 
 function encodeCursor(timestamp: string, id: string): string {
-	return Buffer.from(`${timestamp}|${id}`).toString("base64");
+	const payload = JSON.stringify({ t: timestamp, i: id });
+	return Buffer.from(payload).toString("base64url");
 }
 
 function decodeCursor(cursor: string): [string, string] {
-	const [timestamp, id] = Buffer.from(cursor, "base64").toString().split("|");
+	const decoded = Buffer.from(cursor, "base64url").toString();
+
+	try {
+		const obj = JSON.parse(decoded);
+		if (obj?.t && obj.i) {
+			return [obj.t, obj.i];
+		}
+	} catch {
+		// Fallback for old pipe-separated cursors
+	}
+
+	const separatorIndex = decoded.indexOf("|");
+	if (separatorIndex === -1) {
+		throw new Error("Invalid cursor format");
+	}
+
+	const timestamp = decoded.slice(0, separatorIndex);
+	const id = decoded.slice(separatorIndex + 1);
 	return [timestamp, id];
 }
