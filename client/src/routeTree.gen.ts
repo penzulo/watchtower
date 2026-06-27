@@ -9,178 +9,109 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ProtectedRouteImport } from './routes/_protected'
-import { Route as AuthRouteImport } from './routes/_auth'
-import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
-import { Route as ProtectedSearchRouteImport } from './routes/_protected/search'
-import { Route as ProtectedLogsRouteImport } from './routes/_protected/logs'
-import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
-import { Route as AuthLoginRouteImport } from './routes/_auth/login'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as AppLogsRouteImport } from './routes/_app/logs'
 
-const ProtectedRoute = ProtectedRouteImport.update({
-  id: '/_protected',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/_auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ProtectedRoute,
+  getParentRoute: () => AppRoute,
 } as any)
-const ProtectedSearchRoute = ProtectedSearchRouteImport.update({
+const AppSearchRoute = AppSearchRouteImport.update({
   id: '/search',
   path: '/search',
-  getParentRoute: () => ProtectedRoute,
+  getParentRoute: () => AppRoute,
 } as any)
-const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
+const AppLogsRoute = AppLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => AuthRoute,
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof ProtectedIndexRoute
-  '/login': typeof AuthLoginRoute
-  '/signup': typeof AuthSignupRoute
-  '/logs': typeof ProtectedLogsRoute
-  '/search': typeof ProtectedSearchRoute
+  '/': typeof AppIndexRoute
+  '/logs': typeof AppLogsRoute
+  '/search': typeof AppSearchRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof ProtectedIndexRoute
-  '/login': typeof AuthLoginRoute
-  '/signup': typeof AuthSignupRoute
-  '/logs': typeof ProtectedLogsRoute
-  '/search': typeof ProtectedSearchRoute
+  '/logs': typeof AppLogsRoute
+  '/search': typeof AppSearchRoute
+  '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_auth': typeof AuthRouteWithChildren
-  '/_protected': typeof ProtectedRouteWithChildren
-  '/_auth/login': typeof AuthLoginRoute
-  '/_auth/signup': typeof AuthSignupRoute
-  '/_protected/logs': typeof ProtectedLogsRoute
-  '/_protected/search': typeof ProtectedSearchRoute
-  '/_protected/': typeof ProtectedIndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/logs': typeof AppLogsRoute
+  '/_app/search': typeof AppSearchRoute
+  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup' | '/logs' | '/search'
+  fullPaths: '/' | '/logs' | '/search'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/logs' | '/search'
-  id:
-    | '__root__'
-    | '/_auth'
-    | '/_protected'
-    | '/_auth/login'
-    | '/_auth/signup'
-    | '/_protected/logs'
-    | '/_protected/search'
-    | '/_protected/'
+  to: '/logs' | '/search' | '/'
+  id: '__root__' | '/_app' | '/_app/logs' | '/_app/search' | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AuthRoute: typeof AuthRouteWithChildren
-  ProtectedRoute: typeof ProtectedRouteWithChildren
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_protected': {
-      id: '/_protected'
+    '/_app': {
+      id: '/_app'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof ProtectedRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_auth': {
-      id: '/_auth'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_protected/': {
-      id: '/_protected/'
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof ProtectedIndexRouteImport
-      parentRoute: typeof ProtectedRoute
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/_protected/search': {
-      id: '/_protected/search'
+    '/_app/search': {
+      id: '/_app/search'
       path: '/search'
       fullPath: '/search'
-      preLoaderRoute: typeof ProtectedSearchRouteImport
-      parentRoute: typeof ProtectedRoute
+      preLoaderRoute: typeof AppSearchRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/_protected/logs': {
-      id: '/_protected/logs'
+    '/_app/logs': {
+      id: '/_app/logs'
       path: '/logs'
       fullPath: '/logs'
-      preLoaderRoute: typeof ProtectedLogsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_auth/signup': {
-      id: '/_auth/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof AuthSignupRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/login': {
-      id: '/_auth/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRoute
+      preLoaderRoute: typeof AppLogsRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
-interface AuthRouteChildren {
-  AuthLoginRoute: typeof AuthLoginRoute
-  AuthSignupRoute: typeof AuthSignupRoute
+interface AppRouteChildren {
+  AppLogsRoute: typeof AppLogsRoute
+  AppSearchRoute: typeof AppSearchRoute
+  AppIndexRoute: typeof AppIndexRoute
 }
 
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthLoginRoute: AuthLoginRoute,
-  AuthSignupRoute: AuthSignupRoute,
+const AppRouteChildren: AppRouteChildren = {
+  AppLogsRoute: AppLogsRoute,
+  AppSearchRoute: AppSearchRoute,
+  AppIndexRoute: AppIndexRoute,
 }
 
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
-
-interface ProtectedRouteChildren {
-  ProtectedLogsRoute: typeof ProtectedLogsRoute
-  ProtectedSearchRoute: typeof ProtectedSearchRoute
-  ProtectedIndexRoute: typeof ProtectedIndexRoute
-}
-
-const ProtectedRouteChildren: ProtectedRouteChildren = {
-  ProtectedLogsRoute: ProtectedLogsRoute,
-  ProtectedSearchRoute: ProtectedSearchRoute,
-  ProtectedIndexRoute: ProtectedIndexRoute,
-}
-
-const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
-  ProtectedRouteChildren,
-)
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  AuthRoute: AuthRouteWithChildren,
-  ProtectedRoute: ProtectedRouteWithChildren,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

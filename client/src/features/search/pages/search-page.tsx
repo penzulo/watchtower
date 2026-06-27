@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useFilterLogs } from "@/hooks/use-filter-logs";
-import { Route } from "@/routes/_protected/search";
+import { Route } from "@/routes/_app/search";
 import { LogsFilters } from "../components/logs-filters";
 import { LogsTable } from "../components/logs-table";
 

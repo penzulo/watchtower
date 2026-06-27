@@ -2,7 +2,7 @@ import type { LogQuery, LogRecord } from "@watchtower/shared";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Route } from "@/routes/_protected/search";
+import { Route } from "@/routes/_app/search";
 
 const LEVEL_COLORS: Record<string, string> = {
 	trace: "text-slate-400",

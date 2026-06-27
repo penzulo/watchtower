@@ -1,4 +1,3 @@
-import { betterAuthPlugin } from "@watchtower/server/auth/middleware";
 import { queryLogs } from "@watchtower/server/clickhouse/query";
 import { enqueueDead, enqueueLog } from "@watchtower/server/queues";
 import {
@@ -16,7 +15,6 @@ import { Elysia, StatusMap, t } from "elysia";
 const MAX_RANGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 export const logRoutes = new Elysia({ prefix: "/logs" })
-	.use(betterAuthPlugin)
 	.post(
 		"/",
 		async ({ body, set }) => {
@@ -96,59 +94,55 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 
 	// TODO: This route needs a separate auth mechanism as it
 	// a service-to-service endpoint
-	.get(
-		"/stream",
-		({ set }) => {
-			set.headers["content-type"] = "text/event-stream";
-			set.headers["cache-control"] = "no-cache";
-			set.headers.connection = "keep-alive";
+	.get("/stream", ({ set }) => {
+		set.headers["content-type"] = "text/event-stream";
+		set.headers["cache-control"] = "no-cache";
+		set.headers.connection = "keep-alive";
 
-			const subscriber = createSubscriber();
+		const subscriber = createSubscriber();
 
-			const stream = new ReadableStream({
-				async start(controller) {
-					await subscriber.subscribe(LOGS_CHANNEL, (message) => {
-						try {
-							// Guard against the race where a PUBLISH fires after the
-							// client has disconnected and the controller is already closed.
-							// Without this, Bun throws ERR_INVALID_STATE and crashes.
-							controller.enqueue(
-								new TextEncoder().encode(`data: ${message}\n\n`),
-							);
-						} catch {
-							// Controller is closed — the cancel() below will clean up
-							// the subscriber on the next tick.
-						}
-					});
-				},
-				// cancel() is the correct ReadableStream lifecycle hook for cleanup.
-				// It fires when: the client disconnects, the response is aborted,
-				// or the stream is explicitly cancelled.
-				async cancel() {
+		const stream = new ReadableStream({
+			async start(controller) {
+				await subscriber.subscribe(LOGS_CHANNEL, (message) => {
 					try {
-						// Must await unsubscribe so bun:redis completes the UNSUBSCRIBE
-						// handshake with the server before we tear down the connection.
-						// Calling close() immediately after unsubscribe() (without awaiting)
-						// destroys the socket mid-handshake and throws ERR_REDIS_CONNECTION_CLOSED.
-						await subscriber.unsubscribe(LOGS_CHANNEL);
+						// Guard against the race where a PUBLISH fires after the
+						// client has disconnected and the controller is already closed.
+						// Without this, Bun throws ERR_INVALID_STATE and crashes.
+						controller.enqueue(
+							new TextEncoder().encode(`data: ${message}\n\n`),
+						);
 					} catch {
-						// Already disconnected or unsubscribe failed — safe to ignore.
-					} finally {
-						try {
-							subscriber.close();
-						} catch {
-							// Connection already gone — nothing to do.
-						}
+						// Controller is closed — the cancel() below will clean up
+						// the subscriber on the next tick.
 					}
-				},
-			});
+				});
+			},
+			// cancel() is the correct ReadableStream lifecycle hook for cleanup.
+			// It fires when: the client disconnects, the response is aborted,
+			// or the stream is explicitly cancelled.
+			async cancel() {
+				try {
+					// Must await unsubscribe so bun:redis completes the UNSUBSCRIBE
+					// handshake with the server before we tear down the connection.
+					// Calling close() immediately after unsubscribe() (without awaiting)
+					// destroys the socket mid-handshake and throws ERR_REDIS_CONNECTION_CLOSED.
+					await subscriber.unsubscribe(LOGS_CHANNEL);
+				} catch {
+					// Already disconnected or unsubscribe failed — safe to ignore.
+				} finally {
+					try {
+						subscriber.close();
+					} catch {
+						// Connection already gone — nothing to do.
+					}
+				}
+			},
+		});
 
-			return new Response(stream, {
-				headers: set.headers as Record<string, string>,
-			});
-		},
-		{ auth: true },
-	)
+		return new Response(stream, {
+			headers: set.headers as Record<string, string>,
+		});
+	})
 
 	.get(
 		"/",
@@ -187,7 +181,6 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 			return result;
 		},
 		{
-			auth: true,
 			query: LogQuerySchema,
 			error({ code, error, set }) {
 				if (code === "VALIDATION") {

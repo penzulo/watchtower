@@ -23,7 +23,7 @@ const searchSchema = z.object({
 	sortDirection: z.enum(["asc", "desc"]).optional(),
 });
 
-export const Route = createFileRoute("/_protected/search")({
+export const Route = createFileRoute("/_app/search")({
 	validateSearch: (search) => searchSchema.parse(search) as LogQuery,
 	loaderDeps: ({ search }) => search,
 	loader: ({ context, deps }) =>

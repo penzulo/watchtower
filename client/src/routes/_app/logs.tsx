@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useLiveLogs } from "@/hooks/use-live-logs";
 
-export const Route = createFileRoute("/_protected/logs")({
+export const Route = createFileRoute("/_app/logs")({
 	component: LogsPage,
 });
 

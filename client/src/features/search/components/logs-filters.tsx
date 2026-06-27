@@ -2,7 +2,7 @@ import type { LogQuery } from "@watchtower/shared";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Route } from "@/routes/_protected/search";
+import { Route } from "@/routes/_app/search";
 
 const TIME_PRESETS = [
 	{ label: "15m", ms: 15 * 60 * 1000 },

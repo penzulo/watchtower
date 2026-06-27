@@ -53,7 +53,5 @@ shared/src/
 ## Important notes
 - `routeTree.gen.ts` is auto-generated — never edit manually; excluded from Biome
 - Root `tsconfig.json` is an IDE solution file only; each workspace has its own `tsconfig.json`
-- Server routes require auth via Better Auth middleware (`{ auth: true }`), except POST `/api/v1/logs`
 - SSE endpoint at `GET /api/v1/logs/stream` uses Redis pub/sub for real-time log streaming
 - Dead letter queue routes invalid payloads to a BullMQ job (logged to stderr)
-- Seed command: `bun run server/scripts/seed.ts` (creates `admin@watchtower.local` / `password123`)

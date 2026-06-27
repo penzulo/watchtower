@@ -1,5 +1,4 @@
 import { cors } from "@elysiajs/cors";
-import { betterAuthPlugin } from "@watchtower/server/auth/middleware";
 import { runMigrations } from "@watchtower/server/clickhouse/migrate";
 import { v1 } from "@watchtower/server/routes/v1";
 import "@watchtower/server/queues/worker";
@@ -15,7 +14,6 @@ export const app = new Elysia()
 			credentials: true,
 		}),
 	)
-	.use(betterAuthPlugin)
 	.use(v1)
 	.listen(3000);
 
