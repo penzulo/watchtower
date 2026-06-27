@@ -8,7 +8,7 @@
 	},
 	"scripts": {
 		"dev": "bun run --watch src/index.ts",
-		"build": "tsc && bun run scripts/build.ts",
+		"build": "tsc && bun build src/index.ts --compile --minify --outfile bin/watchtower-server",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
