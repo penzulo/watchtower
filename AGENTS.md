@@ -26,7 +26,7 @@ Run a single test file: `bun test <path>`, e.g. `bun test server/src/queues/inde
 ## Infrastructure prerequisites
 - `bun run infra:up` — required before running integration tests (queue, worker, routes)
 - Some tests are unit-tested with `mock.module()` (clickhouse/query) and don't need infra
-- Environment: `.env.development` files in `server/` and `client/` (Bun loads via `Bun.env`; `process.env` also used in `server/src/redis/`)
+- Environment: `.env.development` files in `server/` and `client/` (Bun loads via `Bun.env`)
 
 ## Repo structure
 ```

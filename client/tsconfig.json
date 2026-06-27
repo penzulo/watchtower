@@ -7,22 +7,18 @@
 		"module": "ESNext",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"types": ["vite/client"],
-
-		/* Path aliases */
 		"paths": {
 			"@/*": ["./src/*"],
 			"@watchtower/server": ["../server/src/index.ts"],
 			"@watchtower/shared": ["../shared/src/index.ts"],
+			"@watchtower/client/*": ["../client/src/*"],
 			"@shared/*": ["../shared/src/*"]
 		},
-
-		/* Bundler mode */
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": true,
 		"noEmit": true,
-
-		/* Linting */
+		"declaration": false,
 		"skipLibCheck": true,
 		"strict": true,
 		"noUnusedLocals": true,
