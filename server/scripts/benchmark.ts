@@ -306,7 +306,7 @@ async function main() {
 
 	// ── Connectivity check ─────────────────────────────────────────────────
 	try {
-		const probe = await fetch(`${SERVER_URL}/api/auth/ok`);
+		const probe = await fetch(`${SERVER_URL}/health`);
 		if (!probe.ok) throw new Error(`Server returned ${probe.status}`);
 		console.log(`${GREEN}✓ Server reachable${RESET}`);
 	} catch (e) {

@@ -14,6 +14,7 @@ export const app = new Elysia()
 			credentials: true,
 		}),
 	)
+	.get("/health", () => "OK")
 	.use(v1)
 	.listen(3000);
 
