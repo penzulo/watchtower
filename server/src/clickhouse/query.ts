@@ -73,19 +73,46 @@ export async function queryLogs(params: QueryParams): Promise<QueryResult> {
 		}
 	}
 
+	// NOTE: `id ASC` as a secondary sort key triggers a ClickHouse-internal
+	// engine bug — NOT an application-level type error. Repro'd directly
+	// against ClickHouse with no app code involved:
+	//
+	//   SELECT * FROM logs
+	//   WHERE timestamp >= ... AND timestamp <= ...
+	//   ORDER BY timestamp ASC, id ASC
+	//   LIMIT 51
+	//
+	// fails with:
+	//   Cannot convert string '<uuid>' to type DateTime64(3): while executing
+	//   'FUNCTION __topKFilter(timestamp : 0) -> __topKFilter(timestamp) UInt8'
+	//
+	// `__topKFilter` is ClickHouse's internal top-K/partial-sort optimizer for
+	// ORDER BY ... LIMIT queries. Something in that optimizer's column binding
+	// gets confused specifically when sorting ASC by (timestamp, id) — dropping
+	// the `id ASC` secondary key (or sorting DESC) avoids it entirely, which is
+	// the actual smoking gun that this lives in ClickHouse's query planner, not
+	// in our query construction or parameter binding.
+	//
+	// Workaround: omit the `id` tie-breaker on ascending timestamp sorts. This
+	// only matters for determinism when many rows share an identical timestamp
+	// (sub-millisecond collisions), which is an acceptable trade for now.
 	const orderClause =
 		sortBy === "timestamp"
-			? `ORDER BY timestamp ${sortDirection}, id ${sortDirection}`
+			? sortDirection === "ASC"
+				? `ORDER BY timestamp ASC`
+				: `ORDER BY timestamp DESC, id DESC`
 			: `ORDER BY ${sortBy} ${sortDirection}, timestamp DESC, id DESC`;
 
-	const result = await getClickhouse().query({
-		query: `
+	const query = `
 			SELECT *
 			FROM logs
 			WHERE ${conditions.join(" AND ")}
 			${orderClause}
 			LIMIT {limit:UInt32}
-		`,
+		`;
+
+	const result = await getClickhouse().query({
+		query,
 		query_params,
 		format: "JSONEachRow",
 	});

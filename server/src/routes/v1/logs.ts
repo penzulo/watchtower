@@ -174,8 +174,8 @@ export const logRoutes = new Elysia({ prefix: "/logs" })
 				to: to.toISOString().replace("T", " ").replace("Z", ""),
 				limit: Number(query.limit ?? 200),
 				cursor: query.cursor,
-				sortBy: query.sortBy,
-				sortDirection: query.sortDirection,
+				sortBy: query.sortBy as "timestamp" | "level" | undefined,
+				sortDirection: query.sortDirection as "asc" | "desc" | undefined,
 			});
 
 			return result;
