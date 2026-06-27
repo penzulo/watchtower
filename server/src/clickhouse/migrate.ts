@@ -1,10 +1,14 @@
 import { createClient } from "@clickhouse/client";
 import { clickHouseConnectionOptions } from "@watchtower/server/clickhouse/connection";
-import { loadMigrations } from "@watchtower/server/clickhouse/load-migrations" with {
-	type: "macro",
-};
+import { sql as logsSchema } from "./migrations/0001_create_logs";
+import { sql as dlqSchema } from "./migrations/0002_create_dlq";
 
 const clickhouse = createClient(clickHouseConnectionOptions);
+
+const migrations = [
+	{ name: "0001_create_logs.sql", sql: logsSchema },
+	{ name: "0002_create_dlq.sql", sql: dlqSchema },
+];
 
 export async function runMigrations() {
 	console.log("Running ClickHouse migrations...");
@@ -27,10 +31,8 @@ export async function runMigrations() {
 	});
 	const executed = (await result.json<{ name: string }>()).map((r) => r.name);
 
-	const allMigrations = loadMigrations();
-
 	let count = 0;
-	for (const migration of allMigrations) {
+	for (const migration of migrations) {
 		if (!executed.includes(migration.name)) {
 			console.log(`Migrating: ${migration.name}`);
 

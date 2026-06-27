@@ -1,3 +1,4 @@
+export const sql = `
 CREATE TABLE IF NOT EXISTS logs (
     id String,
     timestamp DateTime64(3),
@@ -11,3 +12,4 @@ CREATE TABLE IF NOT EXISTS logs (
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (service, environment, timestamp, id);
+`;
