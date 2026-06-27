@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppLogsRouteImport } from './routes/_app/logs'
 
 const AppRoute = AppRouteImport.update({
@@ -28,6 +29,11 @@ const AppSearchRoute = AppSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOverviewRoute = AppOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLogsRoute = AppLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
@@ -37,10 +43,12 @@ const AppLogsRoute = AppLogsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/logs': typeof AppLogsRoute
+  '/overview': typeof AppOverviewRoute
   '/search': typeof AppSearchRoute
 }
 export interface FileRoutesByTo {
   '/logs': typeof AppLogsRoute
+  '/overview': typeof AppOverviewRoute
   '/search': typeof AppSearchRoute
   '/': typeof AppIndexRoute
 }
@@ -48,15 +56,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/logs': typeof AppLogsRoute
+  '/_app/overview': typeof AppOverviewRoute
   '/_app/search': typeof AppSearchRoute
   '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/logs' | '/search'
+  fullPaths: '/' | '/logs' | '/overview' | '/search'
   fileRoutesByTo: FileRoutesByTo
-  to: '/logs' | '/search' | '/'
-  id: '__root__' | '/_app' | '/_app/logs' | '/_app/search' | '/_app/'
+  to: '/logs' | '/overview' | '/search' | '/'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/logs'
+    | '/_app/overview'
+    | '/_app/search'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -86,6 +101,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSearchRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/overview': {
+      id: '/_app/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof AppOverviewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/logs': {
       id: '/_app/logs'
       path: '/logs'
@@ -98,12 +120,14 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppLogsRoute: typeof AppLogsRoute
+  AppOverviewRoute: typeof AppOverviewRoute
   AppSearchRoute: typeof AppSearchRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppLogsRoute: AppLogsRoute,
+  AppOverviewRoute: AppOverviewRoute,
   AppSearchRoute: AppSearchRoute,
   AppIndexRoute: AppIndexRoute,
 }
