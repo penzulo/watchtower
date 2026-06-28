@@ -10,6 +10,27 @@ status: feature-complete for MVP · single-node · self-hosted
 
 ---
 
+## Table of Contents
+
+- [Architecture](#architecture)
+- [The throughput story](#the-throughput-story)
+  - [Round 1 — everything on one machine: 3.5k req/s](#round-1--everything-on-one-machine-35k-reqs)
+  - [Round 2 — splitting the infra: it gets *worse*](#round-2--splitting-the-infra-it-gets-worse)
+  - [Round 3 — removing the block, removing the queue: 8.5k req/s](#round-3--removing-the-block-removing-the-queue-85k-reqs)
+  - [The tradeoff I made on purpose](#the-tradeoff-i-made-on-purpose)
+- [The frontend story](#the-frontend-story)
+- [A ClickHouse ordering bug worth mentioning](#a-clickhouse-ordering-bug-worth-mentioning)
+- [Quickstart](#quickstart)
+  - [Prerequisites](#prerequisites)
+  - [Path A — Docker (recommended)](#path-a--docker-recommended)
+  - [Path B — Bring your own infra](#path-b--bring-your-own-infra)
+  - [Sending a log](#sending-a-log)
+  - [Ports](#ports)
+- [Stack](#stack)
+- [Status](#status)
+
+---
+
 ## Architecture
 
 ![Watchtower architecture: log producer through validation, fan-out to dead letter queue or Redis broker, then hot-path SSE streaming and cold-path ClickHouse persistence](docs/architecture.svg)
@@ -104,36 +125,92 @@ Logs were occasionally rendering slightly out of order even though ingestion was
 
 ## Quickstart
 
+### Prerequisites
+
+- [Bun](https://bun.sh) `>=1.1`
+- [Docker](https://docs.docker.com/get-docker/) (only needed if you don't have your own Redis + ClickHouse)
+
+### Path A — Docker (recommended)
+
+Spins up Redis and ClickHouse locally, then starts both servers.
+
 ```bash
 git clone https://github.com/penzulo/watchtower.git
 cd watchtower
 bun install
 
-# infra: redis + clickhouse (see docker-compose.yml)
-docker compose up -d redis clickhouse
+# Start Redis + ClickHouse in the background
+bun run infra:up
 
-# env
-cp apps/server/.env.example apps/server/.env
-cp apps/client/.env.example apps/client/.env
+# Copy the example env files (defaults point to the Docker containers)
+cp server/.env.example server/.env
+cp client/.env.example client/.env
 
-# run
-bun run dev          # starts apps/server + apps/client via concurrently
+# Start the Elysia server (:3000) + Vite dev server (:5173)
+bun run dev
 ```
 
-| Service | Default port |
-|---|---|
-| API server | `3000` |
-| Client (Vite) | `5173` |
-| Redis | `6379` |
-| ClickHouse HTTP | `8123` |
+Open [http://localhost:5173](http://localhost:5173).
 
-Send a log:
+### Path B — Bring your own infra
+
+If you already have Redis and ClickHouse running somewhere (local, homelab, or cloud), skip `infra:up` and just update the env files.
+
+```bash
+git clone https://github.com/penzulo/watchtower.git
+cd watchtower
+bun install
+
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+```
+
+Edit `server/.env` with your connection details:
+
+```bash
+CLIENT_URL="http://localhost:5173"
+
+# ClickHouse
+CLICKHOUSE_URL="http://<host>:8123"
+CLICKHOUSE_USERNAME="default"
+CLICKHOUSE_PASSWORD="<your_password>"
+CLICKHOUSE_DB="watchtower"
+
+# Redis
+REDIS_HOST="<host>"
+REDIS_PORT=6379
+REDIS_URL="<host>:6379"
+REDIS_PASSWORD="<your_password>"
+```
+
+`client/.env` only needs one line — the URL of the backend:
+
+```bash
+VITE_SERVER_URL="http://localhost:3000"
+```
+
+Then start the app:
+
+```bash
+bun run dev
+```
+
+### Sending a log
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/logs/batch \
   -H "Content-Type: application/json" \
   -d '[{"service":"api-server","level":"info","message":"hello watchtower","environment":"production","timestamp":"2026-06-28T00:00:00Z"}]'
 ```
+
+### Ports
+
+| Service | Default |
+|---|---|
+| Elysia API server | `:3000` |
+| Vite dev server | `:5173` |
+| Redis | `:6379` |
+| ClickHouse HTTP | `:8123` |
 
 ---
 
