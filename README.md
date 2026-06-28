@@ -1,4 +1,6 @@
-# Watchtower
+<p align="center">
+  <img src="docs/wordmark.svg" alt="Watchtower" width="280" />
+</p>
 
 A self-hosted log ingestion and observability pipeline. Logs come in over HTTP, land on a Redis list, get drained and batched into ClickHouse by a worker, and stream live to every connected browser over SSE. No queue broker, no auth, no nonsense — just the smallest set of moving parts that still behaves like a real observability system under load.
 
@@ -24,6 +26,7 @@ status: feature-complete for MVP · single-node · self-hosted
   - [Prerequisites](#prerequisites)
   - [Path A — Docker (recommended)](#path-a--docker-recommended)
   - [Path B — Bring your own infra](#path-b--bring-your-own-infra)
+  - [Production deployment](#production-deployment)
   - [Sending a log](#sending-a-log)
   - [Ports](#ports)
 - [Stack](#stack)
@@ -193,6 +196,18 @@ Then start the app:
 
 ```bash
 bun run dev
+```
+
+### Production deployment
+
+If you are hosting the client statically (e.g. on Vercel or Netlify) and only deploying the backend server, you can skip installing devDependencies (like Vite, React Compiler, or Biome) to save time and disk space:
+
+```bash
+# Install production dependencies only
+bun install --production
+
+# Start only the backend server
+bun run dev:server
 ```
 
 ### Sending a log

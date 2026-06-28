@@ -1,6 +1,5 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Activity, Search, SquareTerminal } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import {
 	Sidebar,
 	SidebarContent,
@@ -19,8 +18,6 @@ export const Route = createFileRoute("/_app")({
 	component: AppLayout,
 });
 
-
-
 function AppLayout() {
 	return (
 		<SidebarProvider>
@@ -32,7 +29,7 @@ function AppLayout() {
 							alt="Watchtower"
 							className="size-5 shrink-0"
 						/>
-						<h1 className="font-mono text-sm font-medium tracking-tight text-foreground">
+						<h1 className="font-mono text-sm font-medium tracking-tight text-foreground group-data-[collapsible=icon]:hidden">
 							watchtower
 						</h1>
 					</Link>
@@ -54,7 +51,7 @@ function AppLayout() {
 										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
-								
+
 								<SidebarMenuItem>
 									<SidebarMenuButton asChild>
 										<Link
@@ -67,13 +64,15 @@ function AppLayout() {
 										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
-								
+
 								<SidebarMenuItem>
 									<SidebarMenuButton asChild>
 										<Link
 											to="/search"
 											search={{
-												from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+												from: new Date(
+													Date.now() - 7 * 24 * 60 * 60 * 1000,
+												).toISOString(),
 												to: new Date().toISOString(),
 												limit: 50,
 											}}
@@ -100,10 +99,6 @@ function AppLayout() {
 			<div className="flex min-h-screen flex-1 flex-col bg-background">
 				<header className="flex h-12 shrink-0 items-center gap-2 border-b border-border/60 px-3">
 					<SidebarTrigger />
-					<Separator orientation="vertical" className="h-4" />
-					<span className="font-mono text-xs text-muted-foreground">
-						/{location.pathname.split("/").filter(Boolean).join("/") || ""}
-					</span>
 				</header>
 
 				<main className="flex-1 overflow-hidden">

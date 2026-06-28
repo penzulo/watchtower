@@ -127,7 +127,9 @@ function Readme() {
 					<Link
 						to="/search"
 						search={{
-							from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+							from: new Date(
+								Date.now() - 7 * 24 * 60 * 60 * 1000,
+							).toISOString(),
 							to: new Date().toISOString(),
 							limit: 50,
 						}}
